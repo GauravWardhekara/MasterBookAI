@@ -1,0 +1,129 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/characters"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ character()?.name || 'Character' }}</ion-title>
+    <ion-buttons slot="end">
+      @if (!isEditing()) {
+        <ion-button (click)="isEditing.set(true)">
+          <ion-icon name="create-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button (click)="startChat()" color="primary">
+          <ion-icon name="chatbubble-outline" slot="start"></ion-icon>
+          Chat
+        </ion-button>
+      } @else {
+        <ion-button (click)="saveChanges()" color="success">
+          <ion-icon name="checkmark-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button (click)="isEditing.set(false)">
+          <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      }
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  @if (character(); as char) {
+    <div class="character-detail-page">
+      <div class="character-header">
+        <div class="character-avatar-large">{{ char.name[0] }}</div>
+        <div class="character-meta">
+          @if (!isEditing()) {
+            <h1>{{ char.name }}</h1>
+            <div class="character-tags">
+              @if (char.isPlayable) {
+                <ion-badge color="primary">Playable</ion-badge>
+              }
+              @if (char.isNpc) {
+                <ion-badge color="secondary">NPC</ion-badge>
+              }
+              @for (tag of char.tags; track tag) {
+                <ion-badge color="medium">{{ tag }}</ion-badge>
+              }
+            </div>
+          } @else {
+            <ion-item>
+              <ion-label position="stacked">Name</ion-label>
+              <ion-input
+                [value]="editData().name"
+                (ionInput)="updateEdit('name', $event.target.value)"
+              ></ion-input>
+            </ion-item>
+          }
+        </div>
+      </div>
+
+      @if (!isEditing()) {
+        <div class="detail-section">
+          <h2>Description</h2>
+          <div class="detail-content">{{ char.description || 'No description provided.' }}</div>
+        </div>
+
+        <div class="detail-section">
+          <h2>Personality</h2>
+          <div class="detail-content">{{ char.personality || 'No personality notes.' }}</div>
+        </div>
+
+        <div class="detail-section">
+          <h2>Greeting Messages</h2>
+          <ion-list lines="full">
+            @for (greeting of char.greetingMessages; track $index) {
+              <ion-item>
+                <ion-label>{{ greeting }}</ion-label>
+              </ion-item>
+            } @empty {
+              <ion-item>
+                <ion-label class="ion-text-center">No greeting messages</ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        </div>
+
+        <div class="ion-padding">
+          <ion-button expand="block" color="danger" fill="outline" (click)="deleteCharacter()">
+            <ion-icon name="trash-outline" slot="start"></ion-icon>
+            Delete Character
+          </ion-button>
+        </div>
+      } @else {
+        <div class="edit-form">
+          <ion-item>
+            <ion-label position="stacked">Description</ion-label>
+            <ion-textarea
+              [value]="editData().description"
+              (ionInput)="updateEdit('description', $event.target.value)"
+              [autoGrow]="true"
+              [rows]="4"
+            ></ion-textarea>
+          </ion-item>
+          <ion-item>
+            <ion-label position="stacked">Personality</ion-label>
+            <ion-textarea
+              [value]="editData().personality"
+              (ionInput)="updateEdit('personality', $event.target.value)"
+              [autoGrow]="true"
+              [rows]="4"
+            ></ion-textarea>
+          </ion-item>
+          <ion-item>
+            <ion-label>Playable</ion-label>
+            <ion-toggle
+              [checked]="editData().isPlayable"
+              (ionChange)="updateEdit('isPlayable', $event.detail.checked)"
+            ></ion-toggle>
+          </ion-item>
+          <ion-item>
+            <ion-label>NPC</ion-label>
+            <ion-toggle
+              [checked]="editData().isNpc"
+              (ionChange)="updateEdit('isNpc', $event.detail.checked)"
+            ></ion-toggle>
+          </ion-item>
+        </div>
+      }
+    </div>
+  }
+</ion-content>
