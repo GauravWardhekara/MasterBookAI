@@ -1,0 +1,338 @@
+/*
+ * MasterBookAI Global CSS
+ */
+
+/* Core CSS required for Ionic components to work properly */
+@import "@ionic/angular/css/core.css";
+
+/* Basic CSS for apps built with Ionic */
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+@import "@ionic/angular/css/display.css";
+
+/* Optional CSS utils */
+@import "@ionic/angular/css/padding.css";
+@import "@ionic/angular/css/float-elements.css";
+@import "@ionic/angular/css/text-alignment.css";
+@import "@ionic/angular/css/text-transformation.css";
+@import "@ionic/angular/css/flex-utils.css";
+
+/* Force dark mode always */
+@import '@ionic/angular/css/palettes/dark.always.css';
+
+/* ── Google Font ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── Base Styles ── */
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+html, body {
+  background: var(--mb-bg-deep);
+  color: var(--mb-text-primary);
+}
+
+/* ── Scrollbar Styling ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(167, 139, 250, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(167, 139, 250, 0.5);
+}
+
+/* ── Glass Card ── */
+.mb-glass-card {
+  background: var(--mb-glass-bg);
+  backdrop-filter: var(--mb-glass-blur);
+  -webkit-backdrop-filter: var(--mb-glass-blur);
+  border: 1px solid var(--mb-glass-border);
+  border-radius: var(--mb-radius-lg);
+  box-shadow: var(--mb-shadow-md);
+  transition: all var(--mb-transition-normal);
+}
+
+.mb-glass-card:hover {
+  border-color: var(--mb-border-light);
+  box-shadow: var(--mb-shadow-glow);
+  transform: translateY(-1px);
+}
+
+/* ── Card Styles ── */
+.mb-card {
+  background: var(--mb-bg-card);
+  border: 1px solid var(--mb-border);
+  border-radius: var(--mb-radius-lg);
+  padding: 16px;
+  transition: all var(--mb-transition-normal);
+}
+
+.mb-card:hover {
+  background: var(--mb-bg-card-hover);
+  border-color: var(--mb-border-light);
+  box-shadow: var(--mb-shadow-sm);
+}
+
+/* ── Buttons ── */
+.mb-btn-primary {
+  --background: linear-gradient(135deg, var(--mb-primary), var(--mb-primary-dark));
+  --border-radius: var(--mb-radius-md);
+  --box-shadow: 0 4px 12px rgba(167, 139, 250, 0.3);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all var(--mb-transition-normal);
+}
+
+.mb-btn-primary:hover {
+  --box-shadow: 0 6px 20px rgba(167, 139, 250, 0.4);
+  transform: translateY(-1px);
+}
+
+.mb-btn-secondary {
+  --background: var(--mb-bg-elevated);
+  --border-radius: var(--mb-radius-md);
+  --color: var(--mb-text-primary);
+  border: 1px solid var(--mb-border);
+  font-weight: 500;
+  transition: all var(--mb-transition-normal);
+}
+
+.mb-btn-ghost {
+  --background: transparent;
+  --color: var(--mb-text-secondary);
+  font-weight: 500;
+  transition: color var(--mb-transition-fast);
+}
+
+.mb-btn-ghost:hover {
+  --color: var(--mb-primary);
+}
+
+/* ── Input Fields ── */
+.mb-input {
+  --background: var(--mb-bg-input);
+  --border-radius: var(--mb-radius-md);
+  --padding-start: 14px;
+  --padding-end: 14px;
+  --color: var(--mb-text-primary);
+  --placeholder-color: var(--mb-text-muted);
+  border: 1px solid var(--mb-border);
+  border-radius: var(--mb-radius-md);
+  transition: border-color var(--mb-transition-fast);
+}
+
+.mb-input:focus-within {
+  border-color: var(--mb-border-focus);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.15);
+}
+
+/* ── Badges ── */
+.mb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--mb-radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.mb-badge-premise { background: rgba(167, 139, 250, 0.15); color: var(--mb-lore-premise); }
+.mb-badge-history { background: rgba(245, 158, 11, 0.15); color: var(--mb-lore-history); }
+.mb-badge-memory  { background: rgba(96, 165, 250, 0.15); color: var(--mb-lore-memory); }
+.mb-badge-faction { background: rgba(248, 113, 113, 0.15); color: var(--mb-lore-faction); }
+.mb-badge-location { background: rgba(52, 211, 153, 0.15); color: var(--mb-lore-location); }
+.mb-badge-species { background: rgba(251, 146, 60, 0.15); color: var(--mb-lore-species); }
+
+/* ── Chips ── */
+.mb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--mb-bg-elevated);
+  border: 1px solid var(--mb-border);
+  border-radius: var(--mb-radius-full);
+  font-size: 13px;
+  color: var(--mb-text-secondary);
+  transition: all var(--mb-transition-fast);
+  cursor: pointer;
+}
+
+.mb-chip:hover {
+  border-color: var(--mb-primary);
+  color: var(--mb-primary);
+}
+
+.mb-chip.active {
+  background: rgba(167, 139, 250, 0.15);
+  border-color: var(--mb-primary);
+  color: var(--mb-primary);
+}
+
+/* ── Section Headers ── */
+.mb-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  margin-bottom: 8px;
+}
+
+.mb-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mb-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+/* ── Empty State ── */
+.mb-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.mb-empty-state ion-icon {
+  font-size: 56px;
+  color: var(--mb-text-muted);
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.mb-empty-state h3 {
+  color: var(--mb-text-secondary);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.mb-empty-state p {
+  color: var(--mb-text-muted);
+  font-size: 14px;
+  max-width: 300px;
+}
+
+/* ── Animated Gradient Background ── */
+.mb-gradient-bg {
+  background: linear-gradient(
+    135deg,
+    var(--mb-bg-deep) 0%,
+    rgba(167, 139, 250, 0.03) 50%,
+    var(--mb-bg-deep) 100%
+  );
+}
+
+/* ── Fade-in Animation ── */
+@keyframes mb-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mb-fade-in {
+  animation: mb-fade-in 0.3s ease forwards;
+}
+
+/* ── Stagger Animation ── */
+@keyframes mb-stagger-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Toolbar ── */
+ion-toolbar {
+  --background: var(--mb-bg-primary);
+  --border-color: var(--mb-border);
+}
+
+ion-title {
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+/* ── Tab Bar ── */
+ion-tab-bar {
+  --background: var(--mb-bg-primary);
+  --border: 1px solid var(--mb-border);
+  border-top: 1px solid var(--mb-border);
+}
+
+ion-tab-button {
+  --color: var(--mb-text-muted);
+  --color-selected: var(--mb-primary);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* ── FAB ── */
+ion-fab-button {
+  --background: linear-gradient(135deg, var(--mb-primary), var(--mb-primary-dark));
+  --box-shadow: 0 4px 16px rgba(167, 139, 250, 0.4);
+}
+
+/* ── Modal ── */
+ion-modal {
+  --background: var(--mb-bg-secondary);
+  --border-radius: var(--mb-radius-xl);
+}
+
+/* ── Action Sheet ── */
+ion-action-sheet {
+  --background: var(--mb-bg-elevated);
+}
+
+/* ── Toast ── */
+ion-toast {
+  --background: var(--mb-bg-elevated);
+  --color: var(--mb-text-primary);
+  --border-radius: var(--mb-radius-md);
+}
+
+/* ── Alert ── */
+ion-alert {
+  --background: var(--mb-bg-elevated);
+}
+
+/* ── Avatar ── */
+.mb-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--mb-radius-full);
+  object-fit: cover;
+  border: 2px solid var(--mb-border);
+}
+
+.mb-avatar-sm {
+  width: 32px;
+  height: 32px;
+}
+
+.mb-avatar-lg {
+  width: 64px;
+  height: 64px;
+}
+
+.mb-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--mb-primary-dark), var(--mb-primary));
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+}

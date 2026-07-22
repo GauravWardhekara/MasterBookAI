@@ -1,0 +1,180 @@
+/**
+ * MasterBookAI Theme — Dark-mode-first, premium aesthetic
+ * Inspired by SillyTavern/NovelAI dark interfaces with rich accent colors
+ */
+
+:root {
+  /* ── Brand Colors ── */
+  --mb-primary: #a78bfa;          /* Violet — main accent */
+  --mb-primary-light: #c4b5fd;
+  --mb-primary-dark: #7c3aed;
+  --mb-secondary: #60a5fa;        /* Blue — secondary accent */
+  --mb-accent: #f59e0b;           /* Amber — highlights/warnings */
+  --mb-success: #34d399;          /* Emerald */
+  --mb-danger: #f87171;           /* Red */
+
+  /* ── Surfaces (dark mode) ── */
+  --mb-bg-deep: #0a0a0f;
+  --mb-bg-primary: #0f1018;
+  --mb-bg-secondary: #161825;
+  --mb-bg-elevated: #1e2035;
+  --mb-bg-card: #1a1c2e;
+  --mb-bg-card-hover: #222540;
+  --mb-bg-input: #12141f;
+
+  /* ── Borders ── */
+  --mb-border: rgba(255, 255, 255, 0.06);
+  --mb-border-light: rgba(255, 255, 255, 0.1);
+  --mb-border-focus: rgba(167, 139, 250, 0.5);
+
+  /* ── Text ── */
+  --mb-text-primary: #f0f0f5;
+  --mb-text-secondary: #9ca3b0;
+  --mb-text-muted: #5c6370;
+  --mb-text-on-primary: #ffffff;
+
+  /* ── Shadows ── */
+  --mb-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --mb-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --mb-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --mb-shadow-glow: 0 0 20px rgba(167, 139, 250, 0.15);
+
+  /* ── Radius ── */
+  --mb-radius-sm: 6px;
+  --mb-radius-md: 10px;
+  --mb-radius-lg: 16px;
+  --mb-radius-xl: 24px;
+  --mb-radius-full: 9999px;
+
+  /* ── Transitions ── */
+  --mb-transition-fast: 150ms ease;
+  --mb-transition-normal: 250ms ease;
+  --mb-transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Glassmorphism ── */
+  --mb-glass-bg: rgba(22, 24, 37, 0.8);
+  --mb-glass-border: rgba(255, 255, 255, 0.08);
+  --mb-glass-blur: blur(20px);
+
+  /* ── Lore Type Colors ── */
+  --mb-lore-premise: #a78bfa;
+  --mb-lore-history: #f59e0b;
+  --mb-lore-memory: #60a5fa;
+  --mb-lore-faction: #f87171;
+  --mb-lore-location: #34d399;
+  --mb-lore-species: #fb923c;
+}
+
+/* ── Ionic Theme Overrides ── */
+:root {
+  --ion-color-primary: #a78bfa;
+  --ion-color-primary-rgb: 167, 139, 250;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #937add;
+  --ion-color-primary-tint: #b097fb;
+
+  --ion-color-secondary: #60a5fa;
+  --ion-color-secondary-rgb: 96, 165, 250;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #5491dc;
+  --ion-color-secondary-tint: #70aefb;
+
+  --ion-color-tertiary: #f59e0b;
+  --ion-color-tertiary-rgb: 245, 158, 11;
+  --ion-color-tertiary-contrast: #000000;
+  --ion-color-tertiary-contrast-rgb: 0, 0, 0;
+  --ion-color-tertiary-shade: #d88b0a;
+  --ion-color-tertiary-tint: #f6a823;
+
+  --ion-color-success: #34d399;
+  --ion-color-success-rgb: 52, 211, 153;
+  --ion-color-success-contrast: #000000;
+  --ion-color-success-contrast-rgb: 0, 0, 0;
+  --ion-color-success-shade: #2eba87;
+  --ion-color-success-tint: #48d8a3;
+
+  --ion-color-warning: #fbbf24;
+  --ion-color-warning-rgb: 251, 191, 36;
+  --ion-color-warning-contrast: #000000;
+  --ion-color-warning-contrast-rgb: 0, 0, 0;
+  --ion-color-warning-shade: #dda820;
+  --ion-color-warning-tint: #fbc53a;
+
+  --ion-color-danger: #f87171;
+  --ion-color-danger-rgb: 248, 113, 113;
+  --ion-color-danger-contrast: #000000;
+  --ion-color-danger-contrast-rgb: 0, 0, 0;
+  --ion-color-danger-shade: #da6363;
+  --ion-color-danger-tint: #f97f7f;
+
+  --ion-color-dark: #f0f0f5;
+  --ion-color-dark-rgb: 240, 240, 245;
+  --ion-color-dark-contrast: #0a0a0f;
+  --ion-color-dark-contrast-rgb: 10, 10, 15;
+  --ion-color-dark-shade: #d3d3d8;
+  --ion-color-dark-tint: #f2f2f6;
+
+  --ion-color-medium: #9ca3b0;
+  --ion-color-medium-rgb: 156, 163, 176;
+  --ion-color-medium-contrast: #000000;
+  --ion-color-medium-contrast-rgb: 0, 0, 0;
+  --ion-color-medium-shade: #898f9b;
+  --ion-color-medium-tint: #a6acb8;
+
+  --ion-color-light: #161825;
+  --ion-color-light-rgb: 22, 24, 37;
+  --ion-color-light-contrast: #f0f0f5;
+  --ion-color-light-contrast-rgb: 240, 240, 245;
+  --ion-color-light-shade: #131521;
+  --ion-color-light-tint: #2d2f3b;
+
+  /* Dark mode surfaces */
+  --ion-background-color: #0f1018;
+  --ion-background-color-rgb: 15, 16, 24;
+
+  --ion-text-color: #f0f0f5;
+  --ion-text-color-rgb: 240, 240, 245;
+
+  --ion-toolbar-background: #0f1018;
+  --ion-toolbar-color: #f0f0f5;
+
+  --ion-tab-bar-background: #0f1018;
+  --ion-tab-bar-color: #5c6370;
+  --ion-tab-bar-color-selected: #a78bfa;
+
+  --ion-card-background: #1a1c2e;
+
+  --ion-item-background: transparent;
+
+  --ion-color-step-50: #1a1c2e;
+  --ion-color-step-100: #1e2035;
+  --ion-color-step-150: #252740;
+  --ion-color-step-200: #2d304a;
+  --ion-color-step-250: #363955;
+  --ion-color-step-300: #3f425f;
+  --ion-color-step-350: #484b6a;
+  --ion-color-step-400: #515474;
+  --ion-color-step-450: #5a5d7f;
+  --ion-color-step-500: #636689;
+  --ion-color-step-550: #6c6f94;
+  --ion-color-step-600: #75789e;
+  --ion-color-step-650: #7e81a9;
+  --ion-color-step-700: #878ab3;
+  --ion-color-step-750: #9093be;
+  --ion-color-step-800: #999cc8;
+  --ion-color-step-850: #a2a5d3;
+  --ion-color-step-900: #ababdd;
+  --ion-color-step-950: #b4b4e8;
+}
+
+/* ── Force dark mode always ── */
+body {
+  --ion-background-color: var(--mb-bg-primary);
+  background: var(--mb-bg-deep);
+}
+
+ion-content {
+  --background: var(--mb-bg-primary);
+}

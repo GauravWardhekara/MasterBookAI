@@ -1,0 +1,7 @@
+{
+  "name": "MasterBookAI",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
