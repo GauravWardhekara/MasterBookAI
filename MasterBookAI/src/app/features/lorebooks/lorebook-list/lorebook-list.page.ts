@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-  IonSearchbar, IonFab, IonFabButton, IonChip, IonBadge,
+  IonSearchbar, IonFab, IonFabButton, IonChip,
   AlertController, ActionSheetController, ToastController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -175,7 +175,7 @@ import { Lorebook } from '../../../core/models/lorebook.model';
   imports: [
     CommonModule, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonSearchbar, IonFab, IonFabButton, IonChip, IonBadge
+    IonSearchbar, IonFab, IonFabButton, IonChip
   ],
 })
 export class LorebookListPage implements OnInit {

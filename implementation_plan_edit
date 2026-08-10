@@ -1,0 +1,80 @@
+# Continue MasterBookAI — Phase 1 (Connections) & Phase 5 (Chat Engine)
+
+## Current State Summary
+
+**Phases completed** (Phases 0, 2, 3, 4, 9-partial):
+- Project scaffold with Ionic 8 + Angular standalone components, dark-mode-first theming
+- All data models defined (Character, Persona, Lorebook, LoreEntry, Scenario, ChatSession, Message, Memory, ConnectionProfile, Export formats)
+- DatabaseService (Dexie.js/IndexedDB), CharacterService, LorebookService, ScenarioService, ChatSessionService, FileIOService
+- Full UI pages: Home, Character List/Editor, Lorebook List/Editor, Scenario List/Editor, Gallery (grid/list with filters), Settings (placeholder), Chat (placeholder)
+- Tab navigation, routing shell
+
+**Next phases to build:** Phase 1 (Connection & Model Layer) → Phase 5 (Standard Chat Engine)
+
+---
+
+## Proposed Changes
+
+### Phase 1 — Connection & Model Layer
+
+#### [NEW] `connection.service.ts`
+- **ConnectionProfile CRUD** — create, read, update, delete connection profiles
+- **Health check** — test endpoint connectivity and list available models
+- **Set default profile** — mark a profile as the default for new scenarios
+
+#### [NEW] `llm-provider.service.ts`
+- **Adapter pattern** — common interface (`LLMAdapter`) with methods: `complete(messages, options)`, `stream(messages, options)`, `listModels()`
+- **OpenAI-compatible adapter** — works with OpenAI, Ollama, LM Studio, koboldcpp, text-generation-webui, any `/v1/chat/completions` endpoint
+- **Streaming support** — SSE/fetch ReadableStream for token-by-token rendering
+- **Prompt template system** — ChatML, Alpaca, Llama3, Mistral, Raw formats for prompt assembly
+
+#### [MODIFY] `settings.page.ts`
+- Add **LLM Connections** settings section — list profiles, create/edit/delete, test connectivity
+- Add **Connection Editor** modal — endpoint URL, auth method, API key, model selection, sampling defaults, template selection
+
+---
+
+### Phase 5 — Standard Chat Engine
+
+#### [NEW] `prompt-assembly.service.ts`
+- **Prompt assembly pipeline** — builds the full prompt from: system instructions → active lore entries (via trigger scanning) → retrieved memories → recent message history
+- **Token budget manager** — tracks token count, prioritizes context allocation
+- **Lorebook trigger scanning** — scans recent messages for trigger words, injects matching entries
+
+#### [MODIFY] `chat.page.ts` (major rewrite)
+- **Full chat UI** — message list with bubbles (user/assistant/system/narrator roles), streaming token display
+- **Message input** — text input with send button, character selector for group chats
+- **Chat controls** — regenerate last response, edit messages, delete messages
+- **Session management** — auto-save messages, update session title, link to scenario
+- **Scenario "Start Chat" flow** — create a new ChatSession from a Scenario, route to chat page
+
+#### [MODIFY] `scenario-editor.page.ts`
+- Add **"Start Chat"** button to create a new session and navigate to the chat page
+
+#### [MODIFY] `scenario-list.page.ts`
+- Add **"Play"** button per scenario card to launch chat directly
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> 1. **Should I build the Connection Manager UI inside Settings, or as a separate top-level page?** Currently Settings is a placeholder — I plan to expand it with connection profile management inline.
+> 2. **LLM streaming approach**: I'll use the standard `fetch()` + `ReadableStream` for SSE parsing (no external library). This works for OpenAI-compatible endpoints. Is that acceptable?
+> 3. **Priority**: Should I build both Phase 1 + Phase 5 together (they're tightly coupled), or do Phase 1 first and stop for review?
+
+---
+
+## Verification Plan
+
+### Manual Verification
+- Create a connection profile pointing to a local Ollama or cloud OpenAI endpoint
+- Test endpoint health check (list models)
+- Start a chat from a scenario and verify:
+  - Messages render correctly with streaming
+  - Lorebook trigger words activate matching entries
+  - Regenerate/edit/delete message actions work
+  - Session saves persist across page reloads
+
+### Build Verification
+- `ng build --configuration development` succeeds without errors

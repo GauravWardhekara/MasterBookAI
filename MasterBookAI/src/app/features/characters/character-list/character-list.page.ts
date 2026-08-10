@@ -4,8 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-  IonSearchbar, IonList, IonItem, IonLabel, IonFab, IonFabButton,
-  IonAvatar, IonChip, IonItemSliding, IonItemOptions, IonItemOption,
+  IonSearchbar, IonFab, IonFabButton,
   AlertController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -167,8 +166,7 @@ import { Character } from '../../../core/models/character.model';
   imports: [
     CommonModule, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonSearchbar, IonList, IonItem, IonLabel, IonFab, IonFabButton,
-    IonAvatar, IonChip, IonItemSliding, IonItemOptions, IonItemOption
+    IonSearchbar, IonFab, IonFabButton
   ],
 })
 export class CharacterListPage implements OnInit {

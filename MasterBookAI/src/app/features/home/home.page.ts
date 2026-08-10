@@ -2,19 +2,18 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-  IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonCardSubtitle,
-  IonGrid, IonRow, IonCol, IonBadge
+  IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   addOutline, bookOutline, peopleOutline, libraryOutline,
-  chatbubblesOutline, sparklesOutline, rocketOutline
+  chatbubblesOutline, sparklesOutline, rocketOutline, bulbOutline
 } from 'ionicons/icons';
 import { ScenarioService } from '../../core/services/scenario.service';
 import { CharacterService } from '../../core/services/character.service';
 import { LorebookService } from '../../core/services/lorebook.service';
 import { ChatSessionService } from '../../core/services/chat-session.service';
+import { MemoryService } from '../../core/services/memory.service';
 
 @Component({
   selector: 'app-home',
@@ -92,6 +91,29 @@ import { ChatSessionService } from '../../core/services/chat-session.service';
               <ion-icon name="chatbubbles-outline" style="color: var(--mb-success)"></ion-icon>
             </div>
             <span>Gallery</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-actions mb-fade-in" style="animation-delay: 0.3s">
+        <div class="mb-section-header">
+          <span class="mb-section-title">Browse</span>
+        </div>
+        <div class="browse-grid">
+          <div class="browse-card" (click)="navigateTo('/characters')">
+            <ion-icon name="people-outline" style="color: var(--mb-secondary)"></ion-icon>
+            <span>Characters</span>
+            <span class="browse-count">{{ characterCount }}</span>
+          </div>
+          <div class="browse-card" (click)="navigateTo('/lorebooks')">
+            <ion-icon name="library-outline" style="color: var(--mb-accent)"></ion-icon>
+            <span>Lorebooks</span>
+            <span class="browse-count">{{ lorebookCount }}</span>
+          </div>
+          <div class="browse-card" (click)="navigateTo('/memories')">
+            <ion-icon name="bulb-outline" style="color: var(--mb-primary)"></ion-icon>
+            <span>Memories</span>
+            <span class="browse-count">{{ memoryCount }}</span>
           </div>
         </div>
       </div>
@@ -247,11 +269,50 @@ import { ChatSessionService } from '../../core/services/chat-session.service';
         grid-template-columns: repeat(2, 1fr);
       }
     }
+
+    .browse-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .browse-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      background: var(--mb-bg-card);
+      border: 1px solid var(--mb-border);
+      border-radius: var(--mb-radius-md);
+      padding: 16px 10px;
+      cursor: pointer;
+      transition: all var(--mb-transition-normal);
+    }
+
+    .browse-card:hover {
+      border-color: var(--mb-border-light);
+      background: var(--mb-bg-card-hover);
+      transform: translateY(-1px);
+    }
+
+    .browse-card ion-icon {
+      font-size: 24px;
+    }
+
+    .browse-card span {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--mb-text-primary);
+    }
+
+    .browse-count {
+      font-size: 11px !important;
+      color: var(--mb-text-muted) !important;
+      font-weight: 500 !important;
+    }
   `],
   imports: [
-    CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonCardSubtitle,
-    IonGrid, IonRow, IonCol, IonBadge
+    CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon
   ],
 })
 export class HomePage implements OnInit {
@@ -259,6 +320,7 @@ export class HomePage implements OnInit {
   characterCount = 0;
   lorebookCount = 0;
   sessionCount = 0;
+  memoryCount = 0;
 
   constructor(
     private router: Router,
@@ -266,10 +328,11 @@ export class HomePage implements OnInit {
     private characterService: CharacterService,
     private lorebookService: LorebookService,
     private chatSessionService: ChatSessionService,
+    private memoryService: MemoryService,
   ) {
     addIcons({
       addOutline, bookOutline, peopleOutline, libraryOutline,
-      chatbubblesOutline, sparklesOutline, rocketOutline
+      chatbubblesOutline, sparklesOutline, rocketOutline, bulbOutline
     });
   }
 
@@ -278,16 +341,18 @@ export class HomePage implements OnInit {
   }
 
   async loadCounts(): Promise<void> {
-    const [scenarios, characters, lorebooks, sessions] = await Promise.all([
+    const [scenarios, characters, lorebooks, sessions, memoryStats] = await Promise.all([
       this.scenarioService.getAllScenarios(),
       this.characterService.getAllCharacters(),
       this.lorebookService.getAllLorebooks(),
       this.chatSessionService.getAllSessions(),
+      this.memoryService.getStats(),
     ]);
     this.scenarioCount = scenarios.length;
     this.characterCount = characters.length;
     this.lorebookCount = lorebooks.length;
     this.sessionCount = sessions.length;
+    this.memoryCount = memoryStats.total;
   }
 
   navigateTo(path: string): void {

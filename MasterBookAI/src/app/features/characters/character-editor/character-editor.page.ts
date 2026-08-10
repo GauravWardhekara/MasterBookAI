@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-  IonInput, IonTextarea, IonToggle, IonItem, IonLabel, IonList,
+  IonInput, IonTextarea, IonToggle, IonItem, IonLabel,
   IonBackButton, IonButtons, IonChip, ToastController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -234,7 +234,7 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
   imports: [
     CommonModule, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonInput, IonTextarea, IonToggle, IonItem, IonLabel, IonList,
+    IonInput, IonTextarea, IonToggle, IonItem, IonLabel,
     IonBackButton, IonButtons, IonChip
   ],
 })

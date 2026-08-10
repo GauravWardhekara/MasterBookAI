@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
 import {
-  IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, IonRouterOutlet
+  IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   homeOutline, home, bookOutline, book, peopleOutline, people,
-  libraryOutline, library, imagesOutline, images, settingsOutline, settings
+  libraryOutline, library, imagesOutline, images, settingsOutline, settings,
+  bulbOutline, bulb
 } from 'ionicons/icons';
 
 @Component({
@@ -23,19 +24,19 @@ import {
           <ion-label>Scenarios</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="characters" href="/characters">
-          <ion-icon name="people-outline"></ion-icon>
-          <ion-label>Characters</ion-label>
-        </ion-tab-button>
-
-        <ion-tab-button tab="lorebooks" href="/lorebooks">
-          <ion-icon name="library-outline"></ion-icon>
-          <ion-label>Lorebooks</ion-label>
-        </ion-tab-button>
-
         <ion-tab-button tab="gallery" href="/gallery">
           <ion-icon name="images-outline"></ion-icon>
           <ion-label>Gallery</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="memories" href="/memories">
+          <ion-icon name="bulb-outline"></ion-icon>
+          <ion-label>Memories</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="settings" href="/settings">
+          <ion-icon name="settings-outline"></ion-icon>
+          <ion-label>Settings</ion-label>
         </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
@@ -63,13 +64,14 @@ import {
       filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.4));
     }
   `],
-  imports: [IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, IonRouterOutlet],
+  imports: [IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel],
 })
 export class TabsLayout {
   constructor() {
     addIcons({
       homeOutline, home, bookOutline, book, peopleOutline, people,
-      libraryOutline, library, imagesOutline, images, settingsOutline, settings
+      libraryOutline, library, imagesOutline, images, settingsOutline, settings,
+      bulbOutline, bulb
     });
   }
 }

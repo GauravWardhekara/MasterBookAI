@@ -50,6 +50,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/gallery/gallery.page').then(m => m.GalleryPage),
       },
       {
+        path: 'memories',
+        loadComponent: () => import('./features/memory/memory-browser.page').then(m => m.MemoryBrowserPage),
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.page').then(m => m.SettingsPage),
       },
@@ -63,5 +67,9 @@ export const routes: Routes = [
   {
     path: 'chat/:sessionId',
     loadComponent: () => import('./features/chat/chat.page').then(m => m.ChatPage),
+  },
+  {
+    path: 'story/:sessionId',
+    loadComponent: () => import('./features/story-mode/story-mode.page').then(m => m.StoryModePage),
   },
 ];
