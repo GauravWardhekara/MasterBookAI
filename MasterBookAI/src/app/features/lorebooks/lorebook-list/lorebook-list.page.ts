@@ -58,7 +58,7 @@ import { Lorebook } from '../../../core/models/lorebook.model';
             <div class="lb-info">
               <div class="lb-title">{{ lb.title }}</div>
               <div class="lb-meta">
-                <span>{{ lb.entries?.length || 0 }} entries</span>
+                <span>{{ lb.entries.length || 0 }} entries</span>
                 <span class="dot">·</span>
                 <span>Updated {{ getRelativeTime(lb.updatedAt) }}</span>
               </div>

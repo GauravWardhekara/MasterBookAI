@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
   IonButtons, IonFooter, IonTextarea,
-  AlertController, ToastController, ActionSheetController
+  AlertController, ToastController, ActionSheetController, ModalController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -13,7 +13,7 @@ import {
   createOutline, trashOutline, arrowUndoOutline, playForwardOutline,
   ellipsisVerticalOutline, bookOutline, sparklesOutline,
   chevronUpOutline, chevronDownOutline, saveOutline, documentTextOutline,
-  bookmarkOutline, bulbOutline
+  bookmarkOutline, bulbOutline, imageOutline
 } from 'ionicons/icons';
 import { ChatSessionService } from '../../core/services/chat-session.service';
 import { ScenarioService } from '../../core/services/scenario.service';
@@ -73,7 +73,7 @@ import { MemoryService } from '../../core/services/memory.service';
       <ion-toolbar class="connection-bar" *ngIf="connectionProfile">
         <div class="connection-indicator">
           <div class="conn-dot connected"></div>
-          <span class="conn-label">{{ connectionProfile?.name }}</span>
+          <span class="conn-label">{{ connectionProfile.name }}</span>
           <span class="conn-model" *ngIf="activeModel">{{ activeModel }}</span>
         </div>
       </ion-toolbar>
@@ -151,6 +151,9 @@ import { MemoryService } from '../../core/services/memory.service';
                  [class.ai-generated]="block.role === 'assistant'"
                  [class.system-note]="block.role === 'system'">
               <div class="block-content" [innerHTML]="formatProse(block.content)"></div>
+              <div *ngIf="block.generatedImageRefs && block.generatedImageRefs.length > 0" class="block-images">
+                <img *ngFor="let imgUrl of block.generatedImageRefs" [src]="imgUrl" alt="Generated" class="block-gen-image" />
+              </div>
               <div class="block-actions" *ngIf="!isStreaming">
                 <ion-button fill="clear" size="small" (click)="editBlock(i)" title="Edit">
                   <ion-icon slot="icon-only" name="create-outline"></ion-icon>
@@ -162,6 +165,9 @@ import { MemoryService } from '../../core/services/memory.service';
                 <ion-button fill="clear" size="small" (click)="pinBlockAsMemory(block)" title="Pin as Memory"
                             [color]="block.isPinnedAsMemory ? 'warning' : undefined">
                   <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
+                </ion-button>
+                <ion-button fill="clear" size="small" (click)="openImageGen(block)" title="Generate Image">
+                  <ion-icon slot="icon-only" name="image-outline"></ion-icon>
                 </ion-button>
                 <ion-button *ngIf="i === storyBlocks.length - 1"
                             fill="clear" size="small" color="danger"
@@ -343,6 +349,14 @@ import { MemoryService } from '../../core/services/memory.service';
       text-align: center; padding: 8px 0;
     }
 
+    .block-images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-left: 12px; }
+    .block-gen-image {
+      max-width: 240px; max-height: 240px; border-radius: var(--mb-radius-md);
+      border: 1px solid var(--mb-border); cursor: pointer;
+      transition: transform 150ms ease;
+    }
+    .block-gen-image:hover { transform: scale(1.05); }
+
     .block-actions {
       display: none; position: absolute; top: 0; right: -4px;
       background: var(--mb-bg-elevated); border: 1px solid var(--mb-border);
@@ -435,13 +449,14 @@ export class StoryModePage implements OnInit {
     private actionSheetCtrl: ActionSheetController,
     private fileIOService: FileIOService,
     private memoryService: MemoryService,
+    private modalCtrl: ModalController,
   ) {
     addIcons({
       arrowBackOutline, sendOutline, settingsOutline, refreshOutline,
       createOutline, trashOutline, arrowUndoOutline, playForwardOutline,
       ellipsisVerticalOutline, bookOutline, sparklesOutline,
       chevronUpOutline, chevronDownOutline, saveOutline, documentTextOutline,
-      bookmarkOutline, bulbOutline
+      bookmarkOutline, bulbOutline, imageOutline
     });
   }
 
@@ -695,6 +710,18 @@ export class StoryModePage implements OnInit {
           text: 'Export as Text',
           icon: 'document-text-outline',
           handler: () => this.exportStory(),
+        },
+        {
+          text: 'Generate Image',
+          icon: 'image-outline',
+          handler: () => {
+            const lastBlock = this.storyBlocks.length > 0
+              ? this.storyBlocks[this.storyBlocks.length - 1]
+              : undefined;
+            if (lastBlock) {
+              this.openImageGen(lastBlock);
+            }
+          },
         },
         {
           text: 'Save as JSON File',
@@ -957,6 +984,29 @@ When writing dialogue, use quotation marks.`;
       }
     } catch (error) {
       console.warn('Auto-extraction failed (non-fatal):', error);
+    }
+  }
+
+  // ── Image Generation ──
+
+  async openImageGen(block: Message): Promise<void> {
+    const { ImageGenPage } = await import('../image-gen/image-gen.page');
+    const modal = await this.modalCtrl.create({
+      component: ImageGenPage,
+      componentProps: {
+        messages: this.session?.messages || [],
+        sessionId: this.session?.id,
+        linkedMessageId: block.id,
+      },
+    });
+    await modal.present();
+
+    await modal.onDidDismiss();
+    if (this.session) {
+      const updated = await this.chatSessionService.getSession(this.session.id);
+      if (updated) {
+        this.session = updated;
+      }
     }
   }
 }

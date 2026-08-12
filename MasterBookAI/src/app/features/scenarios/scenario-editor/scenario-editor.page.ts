@@ -142,7 +142,7 @@ import { Lorebook } from '../../../core/models/lorebook.model';
               <span class="lb-chip-icon">📖</span>
               <div class="lb-chip-info">
                 <span class="lb-chip-name">{{ lb.title }}</span>
-                <span class="lb-chip-meta">{{ lb.entries?.length || 0 }} entries · Priority {{ i + 1 }}</span>
+                <span class="lb-chip-meta">{{ lb.entries.length || 0 }} entries · Priority {{ i + 1 }}</span>
               </div>
               <ion-button fill="clear" size="small" (click)="editLorebook(lb)">
                 <ion-icon slot="icon-only" name="create-outline"></ion-icon>
@@ -467,7 +467,7 @@ export class ScenarioEditorPage implements OnInit {
       header: 'Select Lorebooks',
       inputs: available.map(lb => ({
         type: 'checkbox' as const,
-        label: `${lb.title} (${lb.entries?.length || 0} entries)`,
+        label: `${lb.title} (${lb.entries.length || 0} entries)`,
         value: lb.id,
       })),
       buttons: [

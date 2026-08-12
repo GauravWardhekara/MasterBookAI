@@ -5,3 +5,4 @@ export { Scenario, createDefaultScenario } from './scenario.model';
 export { ChatSession, Message, Memory, createDefaultChatSession } from './chat-session.model';
 export { ConnectionProfile, PromptTemplate, ImageGenConfig, createDefaultConnectionProfile } from './connection-profile.model';
 export { ChatExportFile, SillyTavernWorldInfo, SillyTavernWIEntry } from './export-file.model';
+export { GeneratedImage, ImageProviderType, ImageGenSessionConfig, createDefaultImageGenSessionConfig } from './image-gen-config.model';

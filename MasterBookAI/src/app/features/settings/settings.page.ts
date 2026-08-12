@@ -14,10 +14,11 @@ import {
   refreshOutline, checkmarkCircleOutline, closeCircleOutline,
   flashOutline, saveOutline, createOutline, closeOutline,
   wifiOutline, cloudDoneOutline, desktopOutline, chevronDownOutline,
-  chevronUpOutline
+  chevronUpOutline, imageOutline
 } from 'ionicons/icons';
 import { ConnectionService } from '../../core/services/connection.service';
-import { ConnectionProfile, createDefaultConnectionProfile } from '../../core/models/connection-profile.model';
+import { ImageProviderService } from '../../core/services/image-provider.service';
+import { ConnectionProfile, createDefaultConnectionProfile, ImageGenConfig } from '../../core/models/connection-profile.model';
 
 @Component({
   selector: 'app-settings',
@@ -245,21 +246,125 @@ import { ConnectionProfile, createDefaultConnectionProfile } from '../../core/mo
           </div>
         </div>
 
-        <!-- ── Image Generation (placeholder) ── -->
+        <!-- ── Image Generation ── -->
         <div class="mb-section-header" style="margin-top: 24px;">
           <span class="mb-section-title">
             <ion-icon name="color-palette-outline"></ion-icon> Image Generation
           </span>
+          <ion-button fill="clear" size="small" (click)="startCreateImageConfig()">
+            <ion-icon slot="start" name="add-outline"></ion-icon>
+            Add
+          </ion-button>
         </div>
-        <ion-list class="settings-list">
-          <ion-item class="settings-item">
-            <ion-icon name="color-palette-outline" slot="start"></ion-icon>
-            <ion-label>
-              <h3>Image Providers</h3>
-              <p>Coming in Phase 8 — Configure image generation backends</p>
-            </ion-label>
+
+        <div *ngIf="imageConfigs.length === 0 && !showImageEditor" class="empty-connections">
+          <ion-icon name="color-palette-outline"></ion-icon>
+          <p>No image providers configured</p>
+          <ion-button class="mb-btn-primary" size="small" (click)="startCreateImageConfig()">
+            <ion-icon slot="start" name="add-outline"></ion-icon>
+            Add Provider
+          </ion-button>
+        </div>
+
+        <div class="connection-list" *ngIf="imageConfigs.length > 0">
+          <div *ngFor="let ic of imageConfigs; let i = index"
+               class="connection-card mb-card mb-fade-in"
+               [style.animation-delay]="(i * 0.04) + 's'"
+               [class.is-default]="ic.isDefault">
+            <div class="conn-header" (click)="expandedImageConfigId = expandedImageConfigId === ic.id ? null : ic.id">
+              <div class="conn-status-dot online"></div>
+              <div class="conn-info">
+                <div class="conn-name">
+                  {{ getImageProviderName(ic.providerType) }}
+                  <span *ngIf="ic.isDefault" class="mb-badge mb-badge-premise">Default</span>
+                </div>
+                <div class="conn-url">{{ ic.endpointUrl || 'No endpoint' }}</div>
+              </div>
+              <ion-icon [name]="expandedImageConfigId === ic.id ? 'chevron-up-outline' : 'chevron-down-outline'"
+                        class="expand-icon"></ion-icon>
+            </div>
+
+            <div class="conn-details" *ngIf="expandedImageConfigId === ic.id">
+              <div class="conn-detail-row">
+                <span class="detail-label">Model/Checkpoint</span>
+                <span class="detail-value model-name">{{ ic.modelOrCheckpoint || 'Default' }}</span>
+              </div>
+              <div class="conn-detail-row">
+                <span class="detail-label">Negative Defaults</span>
+                <span class="detail-value">{{ ic.negativePromptDefaults ? 'Set' : 'None' }}</span>
+              </div>
+
+              <div class="conn-actions">
+                <ion-button fill="clear" size="small" (click)="editImageConfig(ic)">
+                  <ion-icon slot="start" name="create-outline"></ion-icon>
+                  Edit
+                </ion-button>
+                <ion-button *ngIf="!ic.isDefault" fill="clear" size="small" (click)="setImageConfigDefault(ic)">
+                  <ion-icon slot="start" name="checkmark-circle-outline"></ion-icon>
+                  Set Default
+                </ion-button>
+                <ion-button fill="clear" size="small" color="danger" (click)="confirmDeleteImageConfig(ic)">
+                  <ion-icon slot="start" name="trash-outline"></ion-icon>
+                  Delete
+                </ion-button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Image Config Editor -->
+        <div class="editor-panel mb-glass-card mb-fade-in" *ngIf="showImageEditor">
+          <div class="editor-header">
+            <span class="editor-title">{{ isEditingImageConfig ? 'Edit Image Provider' : 'New Image Provider' }}</span>
+            <ion-button fill="clear" size="small" (click)="showImageEditor = false">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </div>
+
+          <div class="form-field">
+            <label>Provider Type</label>
+            <div class="toggle-group">
+              <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'openai'" (click)="editingImageConfig.providerType = 'openai'">OpenAI</span>
+              <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'stability'" (click)="editingImageConfig.providerType = 'stability'">Stability</span>
+              <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'a1111'" (click)="editingImageConfig.providerType = 'a1111'">A1111</span>
+              <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'comfyui'" (click)="editingImageConfig.providerType = 'comfyui'">ComfyUI</span>
+              <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'copy-tags'" (click)="editingImageConfig.providerType = 'copy-tags'">Copy Tags</span>
+            </div>
+          </div>
+
+          <div class="form-field" *ngIf="editingImageConfig.providerType !== 'copy-tags'">
+            <label>Endpoint URL</label>
+            <ion-input [(ngModel)]="editingImageConfig.endpointUrl"
+                       [placeholder]="getImageEndpointPlaceholder()"
+                       class="mb-input"></ion-input>
+          </div>
+
+          <div class="form-field" *ngIf="editingImageConfig.providerType !== 'copy-tags' && editingImageConfig.providerType !== 'openai'">
+            <label>Model / Checkpoint</label>
+            <ion-input [(ngModel)]="editingImageConfig.modelOrCheckpoint"
+                       placeholder="e.g. sd_xl_base_1.0"
+                       class="mb-input"></ion-input>
+          </div>
+
+          <div class="form-field">
+            <label>Default Negative Prompt</label>
+            <ion-input [(ngModel)]="editingImageConfig.negativePromptDefaults"
+                       placeholder="low quality, bad anatomy, blurry..."
+                       class="mb-input"></ion-input>
+          </div>
+
+          <ion-item lines="none" class="toggle-item">
+            <ion-label>Set as Default</ion-label>
+            <ion-toggle [(ngModel)]="editingImageConfig.isDefault" slot="end"></ion-toggle>
           </ion-item>
-        </ion-list>
+
+          <div class="editor-actions">
+            <ion-button class="mb-btn-primary" (click)="saveImageConfig()">
+              <ion-icon slot="start" name="save-outline"></ion-icon>
+              {{ isEditingImageConfig ? 'Update' : 'Create' }}
+            </ion-button>
+          </div>
+        </div>
 
         <!-- ── Security ── -->
         <div class="mb-section-header">
@@ -459,8 +564,17 @@ export class SettingsPage implements OnInit {
   editorProfile: Partial<ConnectionProfile> = createDefaultConnectionProfile();
   testResult?: { success: boolean; message: string };
 
+  // Image config state
+  imageConfigs: ImageGenConfig[] = [];
+  expandedImageConfigId: string | null = null;
+  showImageEditor = false;
+  isEditingImageConfig = false;
+  editingImageConfigId?: string;
+  editingImageConfig: Partial<ImageGenConfig> = this.createDefaultImageGenConfig();
+
   constructor(
     private connectionService: ConnectionService,
+    private imageProviderService: ImageProviderService,
     private alertCtrl: AlertController,
     private toastCtrl: ToastController,
   ) {
@@ -470,12 +584,13 @@ export class SettingsPage implements OnInit {
       refreshOutline, checkmarkCircleOutline, closeCircleOutline,
       flashOutline, saveOutline, createOutline, closeOutline,
       wifiOutline, cloudDoneOutline, desktopOutline, chevronDownOutline,
-      chevronUpOutline
+      chevronUpOutline, imageOutline
     });
   }
 
   async ngOnInit(): Promise<void> {
     await this.loadProfiles();
+    await this.loadImageConfigs();
   }
 
   async loadProfiles(): Promise<void> {
@@ -615,6 +730,104 @@ export class SettingsPage implements OnInit {
         duration: 3000, color: 'danger'
       });
       await toast.present();
+    }
+  }
+
+  // ── Image Config CRUD ──
+
+  async loadImageConfigs(): Promise<void> {
+    this.imageConfigs = await this.imageProviderService.getAllConfigs();
+  }
+
+  private createDefaultImageGenConfig(): Partial<ImageGenConfig> {
+    return {
+      providerType: 'copy-tags',
+      endpointUrl: '',
+      modelOrCheckpoint: '',
+      stylePresets: [],
+      negativePromptDefaults: 'low quality, bad anatomy, worst quality, blurry',
+      isDefault: false,
+    };
+  }
+
+  startCreateImageConfig(): void {
+    this.showImageEditor = true;
+    this.isEditingImageConfig = false;
+    this.editingImageConfigId = undefined;
+    this.editingImageConfig = this.createDefaultImageGenConfig();
+  }
+
+  editImageConfig(ic: ImageGenConfig): void {
+    this.showImageEditor = true;
+    this.isEditingImageConfig = true;
+    this.editingImageConfigId = ic.id;
+    this.editingImageConfig = { ...ic };
+  }
+
+  async saveImageConfig(): Promise<void> {
+    if (this.isEditingImageConfig && this.editingImageConfigId) {
+      await this.imageProviderService.updateConfig(this.editingImageConfigId, this.editingImageConfig);
+    } else {
+      await this.imageProviderService.createConfig(this.editingImageConfig);
+    }
+
+    await this.loadImageConfigs();
+    this.showImageEditor = false;
+
+    const toast = await this.toastCtrl.create({
+      message: this.isEditingImageConfig ? 'Image provider updated!' : 'Image provider created!',
+      duration: 2000, color: 'success'
+    });
+    await toast.present();
+  }
+
+  async confirmDeleteImageConfig(ic: ImageGenConfig): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: 'Delete Image Provider',
+      message: `Delete this ${this.getImageProviderName(ic.providerType)} configuration?`,
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Delete', role: 'destructive',
+          handler: async () => {
+            await this.imageProviderService.deleteConfig(ic.id);
+            await this.loadImageConfigs();
+            if (this.expandedImageConfigId === ic.id) this.expandedImageConfigId = null;
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  async setImageConfigDefault(ic: ImageGenConfig): Promise<void> {
+    await this.imageProviderService.updateConfig(ic.id, { isDefault: true });
+    await this.loadImageConfigs();
+    const toast = await this.toastCtrl.create({
+      message: `${this.getImageProviderName(ic.providerType)} set as default`,
+      duration: 2000, color: 'success'
+    });
+    await toast.present();
+  }
+
+  getImageProviderName(type: string): string {
+    switch (type) {
+      case 'openai': return 'OpenAI (DALL·E)';
+      case 'stability': return 'Stability AI';
+      case 'a1111': return 'Automatic1111';
+      case 'comfyui': return 'ComfyUI';
+      case 'copy-tags': return 'Copy Tags Only';
+      default: return type;
+    }
+  }
+
+  getImageEndpointPlaceholder(): string {
+    switch (this.editingImageConfig.providerType) {
+      case 'openai': return 'https://api.openai.com';
+      case 'stability': return 'https://api.stability.ai';
+      case 'a1111': return 'http://localhost:7860';
+      case 'comfyui': return 'http://localhost:8188';
+      default: return '';
     }
   }
 }

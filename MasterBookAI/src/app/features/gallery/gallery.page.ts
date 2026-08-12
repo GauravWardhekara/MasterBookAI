@@ -1,16 +1,17 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-  IonSearchbar, AlertController, ToastController
+  IonSearchbar, AlertController, ToastController, ActionSheetController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   gridOutline, listOutline, heartOutline, heart, downloadOutline,
   cloudUploadOutline, trashOutline, copyOutline, playOutline,
-  imagesOutline, searchOutline, starOutline, star, funnelOutline
+  imagesOutline, searchOutline, starOutline, star, funnelOutline,
+  swapVerticalOutline, imageOutline, ellipsisVerticalOutline
 } from 'ionicons/icons';
 import { ChatSessionService } from '../../core/services/chat-session.service';
 import { ScenarioService } from '../../core/services/scenario.service';
@@ -46,6 +47,13 @@ import { ChatSession } from '../../core/models/chat-session.model';
           <span class="mb-chip" [class.active]="filterMode === 'favorites'" (click)="setFilter('favorites')">
             <ion-icon name="star-outline"></ion-icon> Favorites
           </span>
+          <span class="sort-separator"></span>
+          <select [(ngModel)]="sortMode" (ngModelChange)="onSort()" class="sort-select">
+            <option value="updatedAt">Last Updated</option>
+            <option value="createdAt">Created</option>
+            <option value="title">Title</option>
+            <option value="messageCount">Messages</option>
+          </select>
         </div>
       </ion-toolbar>
     </ion-header>
@@ -76,6 +84,9 @@ import { ChatSession } from '../../core/models/chat-session.model';
             <ion-button class="gc-fav-btn" fill="clear" (click)="toggleFavorite(session, $event)">
               <ion-icon slot="icon-only" [name]="session.isFavorite ? 'star' : 'star-outline'"
                         [style.color]="session.isFavorite ? '#f59e0b' : 'white'"></ion-icon>
+            </ion-button>
+            <ion-button class="gc-menu-btn" fill="clear" (click)="showSessionActions(session, $event)">
+              <ion-icon slot="icon-only" name="ellipsis-vertical-outline" style="color: white; font-size: 16px;"></ion-icon>
             </ion-button>
           </div>
           <div class="gc-info">
@@ -110,18 +121,8 @@ import { ChatSession } from '../../core/models/chat-session.model';
             </div>
           </div>
           <div class="gli-actions">
-            <ion-button fill="clear" size="small" (click)="toggleFavorite(session, $event)">
-              <ion-icon slot="icon-only" [name]="session.isFavorite ? 'star' : 'star-outline'"
-                        [style.color]="session.isFavorite ? '#f59e0b' : ''"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" size="small" (click)="exportSession(session, $event)">
-              <ion-icon slot="icon-only" name="download-outline"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" size="small" (click)="duplicateSession(session, $event)">
-              <ion-icon slot="icon-only" name="copy-outline"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" size="small" color="danger" (click)="confirmDelete(session, $event)">
-              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+            <ion-button fill="clear" size="small" (click)="showSessionActions(session, $event)">
+              <ion-icon slot="icon-only" name="ellipsis-vertical-outline"></ion-icon>
             </ion-button>
           </div>
         </div>
@@ -129,11 +130,20 @@ import { ChatSession } from '../../core/models/chat-session.model';
 
       <!-- Hidden file input -->
       <input type="file" #importInput accept=".json" (change)="onImportFileSelected($event)" style="display:none" />
+      <input type="file" #thumbnailInput accept="image/*" (change)="onThumbnailSelected($event)" style="display:none" />
     </ion-content>
   `,
   styles: [`
     .filter-row {
       display: flex; gap: 8px; padding: 0 16px 8px; overflow-x: auto;
+      align-items: center;
+    }
+    .sort-separator { flex: 1; }
+    .sort-select {
+      background: var(--mb-bg-input); color: var(--mb-text-secondary);
+      border: 1px solid var(--mb-border); border-radius: var(--mb-radius-sm);
+      padding: 4px 8px; font-size: 12px; appearance: auto;
+      min-width: 120px;
     }
 
     .gallery-grid {
@@ -160,6 +170,11 @@ import { ChatSession } from '../../core/models/chat-session.model';
     }
 
     .gc-fav-btn {
+      position: absolute; top: 4px; right: 36px;
+      --padding-start: 4px; --padding-end: 4px;
+    }
+
+    .gc-menu-btn {
       position: absolute; top: 4px; right: 4px;
       --padding-start: 4px; --padding-end: 4px;
     }
@@ -225,6 +240,7 @@ export class GalleryPage implements OnInit {
   viewMode: 'grid' | 'list' = 'grid';
   searchQuery = '';
   filterMode: 'all' | 'chat' | 'story' | 'favorites' = 'all';
+  sortMode: 'updatedAt' | 'createdAt' | 'title' | 'messageCount' = 'updatedAt';
 
   private gradients = [
     'linear-gradient(135deg, #667eea, #764ba2)',
@@ -241,15 +257,21 @@ export class GalleryPage implements OnInit {
     private fileIOService: FileIOService,
     private alertCtrl: AlertController,
     private toastCtrl: ToastController,
+    private actionSheetCtrl: ActionSheetController,
   ) {
     addIcons({
       gridOutline, listOutline, heartOutline, heart, downloadOutline,
       cloudUploadOutline, trashOutline, copyOutline, playOutline,
-      imagesOutline, searchOutline, starOutline, star, funnelOutline
+      imagesOutline, searchOutline, starOutline, star, funnelOutline,
+      swapVerticalOutline, imageOutline, ellipsisVerticalOutline
     });
   }
 
   async ngOnInit(): Promise<void> {
+    await this.loadSessions();
+  }
+
+  async ionViewWillEnter(): Promise<void> {
     await this.loadSessions();
   }
 
@@ -272,6 +294,23 @@ export class GalleryPage implements OnInit {
       );
     }
 
+    // Sort
+    switch (this.sortMode) {
+      case 'createdAt':
+        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+      case 'title':
+        result.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'messageCount':
+        result.sort((a, b) => b.messages.length - a.messages.length);
+        break;
+      case 'updatedAt':
+      default:
+        result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        break;
+    }
+
     return result;
   }
 
@@ -281,6 +320,10 @@ export class GalleryPage implements OnInit {
 
   setFilter(mode: 'all' | 'chat' | 'story' | 'favorites'): void {
     this.filterMode = mode;
+  }
+
+  onSort(): void {
+    // Sorting is done reactively via the getter
   }
 
   async onSearch(): Promise<void> {
@@ -343,8 +386,90 @@ export class GalleryPage implements OnInit {
   }
 
   importFromFile(): void {
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = document.querySelector('#importInput, input[accept=".json"]') as HTMLInputElement;
     input?.click();
+  }
+
+  // ── Session Actions ──
+
+  private thumbnailTargetSession?: ChatSession;
+
+  async showSessionActions(session: ChatSession, event: Event): Promise<void> {
+    event.stopPropagation();
+
+    const actionSheet = await this.actionSheetCtrl.create({
+      header: session.title,
+      buttons: [
+        {
+          text: 'Set Thumbnail',
+          icon: 'image-outline',
+          handler: () => {
+            this.thumbnailTargetSession = session;
+            const input = document.querySelector('input[accept="image/*"]') as HTMLInputElement;
+            input?.click();
+          },
+        },
+        {
+          text: session.isFavorite ? 'Remove Favorite' : 'Add Favorite',
+          icon: session.isFavorite ? 'star' : 'star-outline',
+          handler: () => this.toggleFavorite(session, event),
+        },
+        {
+          text: 'Export',
+          icon: 'download-outline',
+          handler: () => this.exportSession(session, event),
+        },
+        {
+          text: 'Duplicate',
+          icon: 'copy-outline',
+          handler: () => this.duplicateSession(session, event),
+        },
+        {
+          text: 'Delete',
+          icon: 'trash-outline',
+          role: 'destructive',
+          handler: () => this.confirmDelete(session, event),
+        },
+        { text: 'Cancel', role: 'cancel' },
+      ],
+    });
+    await actionSheet.present();
+  }
+
+  async onThumbnailSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !this.thumbnailTargetSession) return;
+
+    try {
+      const dataUrl = await this.readFileAsDataUrl(file);
+      await this.chatSessionService.updateSession(this.thumbnailTargetSession.id, {
+        thumbnailImage: dataUrl,
+      });
+      this.thumbnailTargetSession.thumbnailImage = dataUrl;
+
+      const toast = await this.toastCtrl.create({
+        message: '🖼️ Thumbnail set!', duration: 2000, color: 'success',
+      });
+      await toast.present();
+    } catch (e: any) {
+      const toast = await this.toastCtrl.create({
+        message: `Failed to set thumbnail: ${e.message}`, duration: 3000, color: 'danger',
+      });
+      await toast.present();
+    }
+
+    input.value = '';
+    this.thumbnailTargetSession = undefined;
+  }
+
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
   }
 
   async onImportFileSelected(event: Event): Promise<void> {

@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
   IonButtons, IonFooter,
-  AlertController, ToastController, ActionSheetController
+  AlertController, ToastController, ActionSheetController, ModalController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -13,7 +13,7 @@ import {
   createOutline, trashOutline, copyOutline, stopCircleOutline,
   ellipsisVerticalOutline, chatbubblesOutline, bookOutline,
   personOutline, chevronDownOutline, sparklesOutline,
-  bookmarkOutline, bulbOutline
+  bookmarkOutline, bulbOutline, imageOutline
 } from 'ionicons/icons';
 import { ChatSessionService } from '../../core/services/chat-session.service';
 import { ScenarioService } from '../../core/services/scenario.service';
@@ -52,7 +52,7 @@ import { MemoryService } from '../../core/services/memory.service';
       <ion-toolbar class="connection-bar" *ngIf="connectionProfile">
         <div class="connection-indicator">
           <div class="conn-dot" [class.connected]="!!connectionProfile"></div>
-          <span class="conn-label">{{ connectionProfile?.name }}</span>
+          <span class="conn-label">{{ connectionProfile.name }}</span>
           <span class="conn-model" *ngIf="activeModel">{{ activeModel }}</span>
           <span class="memory-indicator" *ngIf="injectedMemoryCount > 0">
             <ion-icon name="bulb-outline"></ion-icon>
@@ -136,6 +136,9 @@ import { MemoryService } from '../../core/services/memory.service';
                    [class.ai-bubble]="msg.role === 'assistant'"
                    [class.sys-bubble]="msg.role === 'system' || msg.role === 'narrator'">
                 <div class="msg-text" [innerHTML]="formatMessage(msg.content)"></div>
+                <div *ngIf="msg.generatedImageRefs && msg.generatedImageRefs.length > 0" class="msg-images">
+                  <img *ngFor="let imgUrl of msg.generatedImageRefs" [src]="imgUrl" alt="Generated" class="msg-gen-image" />
+                </div>
               </div>
               <div class="msg-meta">
                 <span class="msg-time">{{ formatTime(msg.timestamp) }}</span>
@@ -146,6 +149,9 @@ import { MemoryService } from '../../core/services/memory.service';
                   <ion-button fill="clear" size="small" (click)="pinAsMemory(msg)" title="Pin as Memory"
                               [color]="msg.isPinnedAsMemory ? 'warning' : undefined">
                     <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
+                  </ion-button>
+                  <ion-button fill="clear" size="small" (click)="openImageGen(msg)" title="Generate Image">
+                    <ion-icon slot="icon-only" name="image-outline"></ion-icon>
                   </ion-button>
                   <ion-button *ngIf="msg.role === 'assistant' && i === session!.messages.length - 1"
                               fill="clear" size="small" (click)="regenerateMessage(msg, i)">
@@ -321,6 +327,14 @@ import { MemoryService } from '../../core/services/memory.service';
 
     .msg-text { white-space: pre-wrap; }
 
+    .msg-images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .msg-gen-image {
+      max-width: 200px; max-height: 200px; border-radius: var(--mb-radius-md);
+      border: 1px solid var(--mb-border); cursor: pointer;
+      transition: transform 150ms ease;
+    }
+    .msg-gen-image:hover { transform: scale(1.05); }
+
     .typing-cursor {
       display: inline-block; animation: blink 0.8s step-end infinite;
       color: var(--mb-primary); font-size: 14px; vertical-align: text-bottom;
@@ -405,13 +419,14 @@ export class ChatPage implements OnInit {
     private alertCtrl: AlertController,
     private toastCtrl: ToastController,
     private actionSheetCtrl: ActionSheetController,
+    private modalCtrl: ModalController,
   ) {
     addIcons({
       arrowBackOutline, sendOutline, settingsOutline, refreshOutline,
       createOutline, trashOutline, copyOutline, stopCircleOutline,
       ellipsisVerticalOutline, chatbubblesOutline, bookOutline,
       personOutline, chevronDownOutline, sparklesOutline,
-      bookmarkOutline, bulbOutline
+      bookmarkOutline, bulbOutline, imageOutline
     });
   }
 
@@ -862,6 +877,30 @@ export class ChatPage implements OnInit {
       }
     } catch (error) {
       console.warn('Auto-extraction failed (non-fatal):', error);
+    }
+  }
+
+  // ── Image Generation ──
+
+  async openImageGen(msg: Message): Promise<void> {
+    const { ImageGenPage } = await import('../image-gen/image-gen.page');
+    const modal = await this.modalCtrl.create({
+      component: ImageGenPage,
+      componentProps: {
+        messages: this.session?.messages || [],
+        sessionId: this.session?.id,
+        linkedMessageId: msg.id,
+      },
+    });
+    await modal.present();
+
+    // Reload session after modal closes to pick up attached images
+    await modal.onDidDismiss();
+    if (this.session) {
+      const updated = await this.chatSessionService.getSession(this.session.id);
+      if (updated) {
+        this.session = updated;
+      }
     }
   }
 }
