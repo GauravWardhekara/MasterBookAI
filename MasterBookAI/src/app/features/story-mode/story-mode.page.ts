@@ -75,6 +75,10 @@ import { MemoryService } from '../../core/services/memory.service';
           <div class="conn-dot connected"></div>
           <span class="conn-label">{{ connectionProfile.name }}</span>
           <span class="conn-model" *ngIf="activeModel">{{ activeModel }}</span>
+          <span class="memory-indicator" *ngIf="injectedMemoryCount > 0">
+            <ion-icon name="bulb-outline"></ion-icon>
+            {{ injectedMemoryCount }} memories
+          </span>
         </div>
       </ion-toolbar>
     </ion-header>
@@ -126,12 +130,13 @@ import { MemoryService } from '../../core/services/memory.service';
             Author's Note
           </ion-button>
 
-          <!-- Story Prose Content -->
-          <div class="prose-container">
+          <!-- ═══ BOOK PAGE ═══ -->
+          <div class="book-page">
+            <!-- Empty State -->
             <div *ngIf="storyBlocks.length === 0 && !isStreaming" class="story-empty">
               <div class="empty-icon">✍️</div>
               <h3>Begin Your Story</h3>
-              <p>Write the opening or let the AI start the narrative</p>
+              <p>Give a direction or let the AI start the narrative</p>
               <div class="start-actions">
                 <ion-button class="mb-btn-primary" (click)="generateContinuation()">
                   <ion-icon slot="start" name="sparkles-outline"></ion-icon>
@@ -139,47 +144,93 @@ import { MemoryService } from '../../core/services/memory.service';
                 </ion-button>
                 <ion-button class="mb-btn-secondary" (click)="focusInput()">
                   <ion-icon slot="start" name="create-outline"></ion-icon>
-                  You Write Opening
+                  Give a Direction
                 </ion-button>
               </div>
             </div>
 
-            <!-- Story blocks -->
-            <div *ngFor="let block of storyBlocks; let i = index; trackBy: trackByBlockIndex"
-                 class="story-block"
-                 [class.user-written]="block.role === 'user'"
-                 [class.ai-generated]="block.role === 'assistant'"
-                 [class.system-note]="block.role === 'system'">
-              <div class="block-content" [innerHTML]="formatProse(block.content)"></div>
-              <div *ngIf="block.generatedImageRefs && block.generatedImageRefs.length > 0" class="block-images">
-                <img *ngFor="let imgUrl of block.generatedImageRefs" [src]="imgUrl" alt="Generated" class="block-gen-image" />
-              </div>
-              <div class="block-actions" *ngIf="!isStreaming">
-                <ion-button fill="clear" size="small" (click)="editBlock(i)" title="Edit">
-                  <ion-icon slot="icon-only" name="create-outline"></ion-icon>
-                </ion-button>
-                <ion-button *ngIf="i === storyBlocks.length - 1 && block.role === 'assistant'"
-                            fill="clear" size="small" (click)="regenerateLastBlock()" title="Regenerate">
-                  <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
-                </ion-button>
-                <ion-button fill="clear" size="small" (click)="pinBlockAsMemory(block)" title="Pin as Memory"
-                            [color]="block.isPinnedAsMemory ? 'warning' : undefined">
-                  <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
-                </ion-button>
-                <ion-button fill="clear" size="small" (click)="openImageGen(block)" title="Generate Image">
-                  <ion-icon slot="icon-only" name="image-outline"></ion-icon>
-                </ion-button>
-                <ion-button *ngIf="i === storyBlocks.length - 1"
-                            fill="clear" size="small" color="danger"
-                            (click)="undoLastBlock()" title="Undo">
-                  <ion-icon slot="icon-only" name="arrow-undo-outline"></ion-icon>
-                </ion-button>
-              </div>
-            </div>
+            <!-- Story Blocks -->
+            <ng-container *ngFor="let block of storyBlocks; let i = index; trackBy: trackByBlockIndex">
 
-            <!-- Streaming indicator -->
-            <div *ngIf="isStreaming" class="story-block ai-generated streaming-block">
-              <div class="block-content" [innerHTML]="formatProse(streamingContent)"></div>
+              <!-- ── User Direction (collapsible chip) ── -->
+              <div *ngIf="block.role === 'user'" class="direction-chip"
+                   [class.expanded]="expandedDirections.has(block.id)"
+                   (click)="toggleDirection(block.id)">
+                <div class="direction-header">
+                  <ion-icon name="create-outline"></ion-icon>
+                  <span>Author's Direction</span>
+                  <ion-icon [name]="expandedDirections.has(block.id) ? 'chevron-up-outline' : 'chevron-down-outline'"
+                            class="direction-toggle"></ion-icon>
+                </div>
+                <div class="direction-content" *ngIf="expandedDirections.has(block.id)">
+                  {{ block.content }}
+                </div>
+                <div class="block-actions direction-actions" *ngIf="!isStreaming" (click)="$event.stopPropagation()">
+                  <ion-button fill="clear" size="small" (click)="editBlock(i)" title="Edit">
+                    <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                  </ion-button>
+                  <ion-button *ngIf="i === storyBlocks.length - 1"
+                              fill="clear" size="small" color="danger"
+                              (click)="undoLastBlock()" title="Undo">
+                    <ion-icon slot="icon-only" name="arrow-undo-outline"></ion-icon>
+                  </ion-button>
+                </div>
+              </div>
+
+              <!-- ── AI Story Prose ── -->
+              <div *ngIf="block.role === 'assistant'" class="prose-block"
+                   [class.first-ai-block]="isFirstAIBlock(i)">
+                <!-- Ornamental separator between AI blocks -->
+                <div *ngIf="hasPreviousAIBlock(i)" class="ornamental-separator">
+                  <span>· · ·</span>
+                </div>
+
+                <div class="prose-text" [innerHTML]="formatProse(block.content)"></div>
+
+                <!-- Book illustrations -->
+                <div *ngIf="block.generatedImageRefs && block.generatedImageRefs.length > 0" class="book-illustrations">
+                  <div *ngFor="let imgUrl of block.generatedImageRefs" class="book-illustration">
+                    <img [src]="imgUrl" alt="Illustration" />
+                  </div>
+                </div>
+
+                <!-- Block actions (on hover) -->
+                <div class="block-actions" *ngIf="!isStreaming">
+                  <ion-button fill="clear" size="small" (click)="editBlock(i)" title="Edit">
+                    <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                  </ion-button>
+                  <ion-button *ngIf="i === storyBlocks.length - 1"
+                              fill="clear" size="small" (click)="regenerateLastBlock()" title="Regenerate">
+                    <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+                  </ion-button>
+                  <ion-button fill="clear" size="small" (click)="pinBlockAsMemory(block)" title="Pin as Memory"
+                              [color]="block.isPinnedAsMemory ? 'warning' : undefined">
+                    <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
+                  </ion-button>
+                  <ion-button fill="clear" size="small" (click)="openImageGen(block)" title="Generate Image">
+                    <ion-icon slot="icon-only" name="image-outline"></ion-icon>
+                  </ion-button>
+                  <ion-button *ngIf="i === storyBlocks.length - 1"
+                              fill="clear" size="small" color="danger"
+                              (click)="undoLastBlock()" title="Undo">
+                    <ion-icon slot="icon-only" name="arrow-undo-outline"></ion-icon>
+                  </ion-button>
+                </div>
+              </div>
+
+              <!-- ── System Note ── -->
+              <div *ngIf="block.role === 'system' || block.role === 'narrator'" class="system-note">
+                {{ block.content }}
+              </div>
+
+            </ng-container>
+
+            <!-- ── Streaming Block ── -->
+            <div *ngIf="isStreaming" class="prose-block streaming-block">
+              <div *ngIf="hasAnyAIBlock()" class="ornamental-separator">
+                <span>· · ·</span>
+              </div>
+              <div class="prose-text" [innerHTML]="formatProse(streamingContent)"></div>
               <span class="typing-cursor">▊</span>
             </div>
           </div>
@@ -195,7 +246,7 @@ import { MemoryService } from '../../core/services/memory.service';
         <div class="story-input-area">
           <textarea #storyInput
             class="story-input"
-            [placeholder]="isStreaming ? 'AI is writing...' : 'Write or direct the story...'"
+            [placeholder]="isStreaming ? 'AI is writing...' : 'Give a direction for the story...'"
             [(ngModel)]="inputText"
             (keydown)="onKeyDown($event)"
             [disabled]="isStreaming"
@@ -203,13 +254,13 @@ import { MemoryService } from '../../core/services/memory.service';
           ></textarea>
           <div class="story-input-actions">
             <ion-button *ngIf="!isStreaming" class="action-btn"
-                        [disabled]="!connectionProfile"
-                        fill="clear" (click)="submitUserText()" title="Add your text">
+                        [disabled]="!inputText.trim() || !connectionProfile"
+                        fill="clear" (click)="submitUserText()" title="Send direction & generate">
               <ion-icon slot="icon-only" name="send-outline"></ion-icon>
             </ion-button>
             <ion-button *ngIf="!isStreaming" class="action-btn continue-btn"
                         [disabled]="!connectionProfile"
-                        fill="clear" (click)="generateContinuation()" title="AI continues">
+                        fill="clear" (click)="generateContinuation()" title="Continue without direction">
               <ion-icon slot="icon-only" name="play-forward-outline"></ion-icon>
             </ion-button>
             <ion-button *ngIf="isStreaming" class="action-btn stop-btn"
@@ -222,11 +273,12 @@ import { MemoryService } from '../../core/services/memory.service';
     </ion-footer>
   `,
   styles: [`
+    /* ═══════════════════════════════════════
+       LAYOUT & HEADER
+       ═══════════════════════════════════════ */
     .story-content { --background: var(--mb-bg-deep); }
 
-    .story-title-bar {
-      display: flex; align-items: center; gap: 6px;
-    }
+    .story-title-bar { display: flex; align-items: center; gap: 6px; }
     .title-icon { font-size: 18px; color: var(--mb-accent); }
 
     .controls-bar {
@@ -237,12 +289,8 @@ import { MemoryService } from '../../core/services/memory.service';
       display: flex; align-items: center; gap: 12px;
       padding: 4px 16px; font-size: 11px;
     }
-    .pov-controls, .tense-controls {
-      display: flex; gap: 4px;
-    }
-    .pov-controls .mb-chip, .tense-controls .mb-chip {
-      font-size: 11px; padding: 2px 8px;
-    }
+    .pov-controls, .tense-controls { display: flex; gap: 4px; }
+    .pov-controls .mb-chip, .tense-controls .mb-chip { font-size: 11px; padding: 2px 8px; }
     .word-count {
       margin-left: auto; color: var(--mb-text-muted);
       font-size: 11px; font-weight: 500;
@@ -256,15 +304,18 @@ import { MemoryService } from '../../core/services/memory.service';
       display: flex; align-items: center; gap: 8px;
       padding: 2px 16px; font-size: 11px; color: var(--mb-text-muted);
     }
-    .conn-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-    }
+    .conn-dot { width: 6px; height: 6px; border-radius: 50%; }
     .conn-dot.connected {
       background: var(--mb-success);
       box-shadow: 0 0 4px rgba(52, 211, 153, 0.4);
     }
     .conn-label { font-weight: 500; }
     .conn-model { font-family: monospace; font-size: 10px; color: var(--mb-primary); }
+    .memory-indicator {
+      display: flex; align-items: center; gap: 3px;
+      font-size: 10px; color: var(--mb-accent); margin-left: auto;
+    }
+    .memory-indicator ion-icon { font-size: 12px; }
 
     .no-connection-banner {
       display: flex; align-items: center; gap: 8px;
@@ -287,7 +338,7 @@ import { MemoryService } from '../../core/services/memory.service';
     .story-header-title { font-weight: 700; font-size: 16px; color: var(--mb-text-primary); }
     .story-header-meta { font-size: 12px; color: var(--mb-text-muted); }
 
-    /* Author's Note */
+    /* ── Author's Note ── */
     .authors-note-section {
       background: rgba(245, 158, 11, 0.06);
       border: 1px solid rgba(245, 158, 11, 0.15);
@@ -311,15 +362,56 @@ import { MemoryService } from '../../core/services/memory.service';
       margin-bottom: 12px;
     }
 
-    /* Prose */
-    .prose-container { line-height: 1.8; }
-
-    .story-empty {
-      text-align: center; padding: 48px 24px;
+    /* ═══════════════════════════════════════
+       BOOK PAGE
+       ═══════════════════════════════════════ */
+    .book-page {
+      background: linear-gradient(180deg,
+        rgba(22, 20, 35, 0.95) 0%,
+        rgba(18, 16, 30, 0.98) 100%
+      );
+      border: 1px solid rgba(167, 139, 250, 0.06);
+      border-radius: 3px;
+      padding: 40px 36px;
+      position: relative;
+      min-height: 200px;
+      box-shadow:
+        inset 0 0 40px rgba(0, 0, 0, 0.15),
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        -3px 0 6px rgba(0, 0, 0, 0.1),
+        3px 0 6px rgba(0, 0, 0, 0.1);
     }
+
+    /* Spine edge */
+    .book-page::before {
+      content: '';
+      position: absolute;
+      top: 8px; bottom: 8px; left: 0;
+      width: 3px;
+      background: linear-gradient(to bottom,
+        rgba(167, 139, 250, 0.12),
+        rgba(167, 139, 250, 0.04),
+        rgba(167, 139, 250, 0.12)
+      );
+      border-radius: 0 2px 2px 0;
+    }
+
+    /* Top page ornament */
+    .book-page::after {
+      content: '❦';
+      position: absolute;
+      top: 12px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 14px;
+      color: rgba(167, 139, 250, 0.15);
+    }
+
+    /* ── Empty State ── */
+    .story-empty { text-align: center; padding: 48px 24px; }
     .empty-icon { font-size: 48px; margin-bottom: 16px; }
     .story-empty h3 {
       font-weight: 700; color: var(--mb-text-primary); margin-bottom: 8px;
+      font-family: 'Libre Baskerville', Georgia, serif;
     }
     .story-empty p { color: var(--mb-text-muted); margin-bottom: 24px; }
     .start-actions { display: flex; flex-direction: column; gap: 10px; align-items: center; }
@@ -330,54 +422,155 @@ import { MemoryService } from '../../core/services/memory.service';
       border: 1px solid var(--mb-border);
     }
 
-    .story-block {
-      position: relative; padding: 4px 0; margin-bottom: 2px;
+    /* ═══════════════════════════════════════
+       COLLAPSIBLE AUTHOR DIRECTION
+       ═══════════════════════════════════════ */
+    .direction-chip {
+      margin: 16px 0;
+      padding: 8px 14px;
+      background: rgba(245, 158, 11, 0.04);
+      border: 1px solid rgba(245, 158, 11, 0.1);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 200ms ease;
+      position: relative;
     }
-    .story-block .block-content {
-      font-size: 15px; color: var(--mb-text-primary);
-      line-height: 1.85; white-space: pre-wrap;
+    .direction-chip:hover {
+      background: rgba(245, 158, 11, 0.08);
+      border-color: rgba(245, 158, 11, 0.18);
     }
-    .story-block.user-written .block-content {
-      border-left: 2px solid rgba(167, 139, 250, 0.3);
-      padding-left: 12px;
+    .direction-header {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 600;
+      color: rgba(245, 158, 11, 0.55);
+      text-transform: uppercase; letter-spacing: 0.5px;
     }
-    .story-block.ai-generated .block-content {
-      /* Seamless — no border for AI text */
+    .direction-header ion-icon { font-size: 12px; }
+    .direction-toggle { margin-left: auto; font-size: 14px; opacity: 0.5; }
+    .direction-content {
+      margin-top: 8px; padding-top: 8px;
+      border-top: 1px solid rgba(245, 158, 11, 0.08);
+      font-size: 13px; color: var(--mb-text-secondary);
+      font-style: italic; white-space: pre-wrap; line-height: 1.6;
+      animation: mb-fade-in 0.2s ease forwards;
     }
-    .story-block.system-note .block-content {
-      font-size: 13px; color: var(--mb-text-muted); font-style: italic;
+
+    /* ═══════════════════════════════════════
+       AI PROSE BLOCKS
+       ═══════════════════════════════════════ */
+    .prose-block {
+      position: relative;
+      margin-bottom: 4px;
+    }
+
+    .prose-text {
+      font-family: 'Libre Baskerville', Georgia, 'Times New Roman', serif;
+      font-size: 15px;
+      line-height: 1.9;
+      color: rgba(228, 222, 240, 0.9);
+      text-align: justify;
+      -webkit-hyphens: auto;
+      hyphens: auto;
+    }
+
+    /* Book paragraphs (injected via formatProse) */
+    :host ::ng-deep .book-para {
+      text-indent: 2em;
+      margin: 0 0 0.5em 0;
+    }
+    :host ::ng-deep .book-para:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Drop cap on first AI block */
+    :host ::ng-deep .first-ai-block .book-para:first-child {
+      text-indent: 0;
+    }
+    :host ::ng-deep .first-ai-block .book-para:first-child::first-letter {
+      float: left;
+      font-size: 3.4em;
+      line-height: 0.78;
+      padding: 4px 10px 0 0;
+      color: var(--mb-primary);
+      font-weight: 700;
+      font-family: 'Libre Baskerville', Georgia, serif;
+    }
+
+    /* ── Ornamental Separator ── */
+    .ornamental-separator {
+      text-align: center;
+      padding: 18px 0;
+      color: rgba(167, 139, 250, 0.25);
+      font-size: 16px;
+      letter-spacing: 12px;
+      user-select: none;
+    }
+
+    /* ═══════════════════════════════════════
+       BOOK ILLUSTRATIONS
+       ═══════════════════════════════════════ */
+    .book-illustrations {
+      margin: 28px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .book-illustration {
+      max-width: 85%;
+      border: 2px solid rgba(167, 139, 250, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+      position: relative;
+      transition: transform 200ms ease;
+    }
+    .book-illustration:hover { transform: scale(1.02); }
+    .book-illustration img {
+      width: 100%; display: block;
+    }
+    /* Inner glow frame */
+    .book-illustration::after {
+      content: '';
+      position: absolute; inset: 0;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      pointer-events: none;
+    }
+
+    /* ── System Note ── */
+    .system-note {
       text-align: center; padding: 8px 0;
+      font-size: 12px; color: var(--mb-text-muted);
+      font-style: italic;
     }
 
-    .block-images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-left: 12px; }
-    .block-gen-image {
-      max-width: 240px; max-height: 240px; border-radius: var(--mb-radius-md);
-      border: 1px solid var(--mb-border); cursor: pointer;
-      transition: transform 150ms ease;
-    }
-    .block-gen-image:hover { transform: scale(1.05); }
-
+    /* ═══════════════════════════════════════
+       BLOCK ACTIONS (hover toolbar)
+       ═══════════════════════════════════════ */
     .block-actions {
       display: none; position: absolute; top: 0; right: -4px;
       background: var(--mb-bg-elevated); border: 1px solid var(--mb-border);
       border-radius: var(--mb-radius-sm); padding: 2px;
       box-shadow: var(--mb-shadow-sm);
+      z-index: 10;
     }
-    .story-block:hover .block-actions { display: flex; }
+    .prose-block:hover .block-actions,
+    .direction-chip:hover .direction-actions { display: flex; }
     .block-actions ion-button {
       --padding-start: 4px; --padding-end: 4px; height: 24px;
     }
 
-    .streaming-block {
-      opacity: 0.9;
-    }
+    /* ── Streaming ── */
+    .streaming-block { opacity: 0.9; }
     .typing-cursor {
       display: inline-block; animation: blink 0.8s step-end infinite;
       color: var(--mb-primary); font-size: 14px;
     }
     @keyframes blink { 50% { opacity: 0; } }
 
-    /* Input */
+    /* ═══════════════════════════════════════
+       INPUT FOOTER
+       ═══════════════════════════════════════ */
     .story-input-toolbar {
       --background: var(--mb-bg-secondary);
       --border-color: var(--mb-border);
@@ -401,6 +594,16 @@ import { MemoryService } from '../../core/services/memory.service';
     .action-btn[disabled] { opacity: 0.3; }
     .continue-btn { --color: var(--mb-primary); }
     .stop-btn { --color: var(--mb-danger); font-size: 12px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .book-page { padding: 24px 18px; }
+      .prose-text { font-size: 14.5px; }
+      :host ::ng-deep .first-ai-block .book-para:first-child::first-letter {
+        font-size: 2.8em;
+      }
+      .book-illustration { max-width: 95%; }
+    }
   `],
   imports: [
     CommonModule, FormsModule,
@@ -422,6 +625,10 @@ export class StoryModePage implements OnInit {
   streamingContent = '';
   authorsNote = '';
   showAuthorsNote = false;
+  injectedMemoryCount = 0;
+
+  /** Track which user direction blocks are expanded */
+  expandedDirections = new Set<string>();
 
   /** Auto-extraction triggers every N messages */
   private readonly AUTO_EXTRACT_INTERVAL = 10;
@@ -492,8 +699,11 @@ export class StoryModePage implements OnInit {
     return this.session?.messages || [];
   }
 
+  /** Only count words from AI-generated prose (not user directions) */
   get totalWordCount(): number {
-    return this.storyBlocks.reduce((sum, m) => sum + m.content.split(/\s+/).filter(w => w).length, 0);
+    return this.storyBlocks
+      .filter(m => m.role === 'assistant')
+      .reduce((sum, m) => sum + m.content.split(/\s+/).filter(w => w).length, 0);
   }
 
   // ── POV/Tense ──
@@ -506,8 +716,45 @@ export class StoryModePage implements OnInit {
     this.tense = tense;
   }
 
+  // ── Direction Expand/Collapse ──
+
+  toggleDirection(id: string): void {
+    if (this.expandedDirections.has(id)) {
+      this.expandedDirections.delete(id);
+    } else {
+      this.expandedDirections.add(id);
+    }
+  }
+
+  // ── Block Type Helpers ──
+
+  /** Check if this is the very first AI block in the story */
+  isFirstAIBlock(index: number): boolean {
+    for (let i = 0; i < index; i++) {
+      if (this.storyBlocks[i].role === 'assistant') return false;
+    }
+    return true;
+  }
+
+  /** Check if there's a previous AI block before this index */
+  hasPreviousAIBlock(index: number): boolean {
+    for (let i = index - 1; i >= 0; i--) {
+      if (this.storyBlocks[i].role === 'assistant') return true;
+    }
+    return false;
+  }
+
+  /** Check if any AI block exists in the story so far */
+  hasAnyAIBlock(): boolean {
+    return this.storyBlocks.some(b => b.role === 'assistant');
+  }
+
   // ── User Input ──
 
+  /**
+   * Save user text as an author direction, then auto-trigger AI generation.
+   * User input serves as a guideline for the next generation, not as story prose.
+   */
   async submitUserText(): Promise<void> {
     if (!this.inputText.trim() || !this.session) return;
 
@@ -527,14 +774,30 @@ export class StoryModePage implements OnInit {
     this.inputText = '';
     await this.saveSession();
     this.scrollToBottom();
+
+    // Automatically trigger AI continuation based on the direction
+    await this.generateContinuation();
   }
 
   async generateContinuation(): Promise<void> {
     if (!this.session || !this.connectionProfile) return;
 
-    // If there's user text in the input, submit it first as a direction
+    // If there's unsaved direction text in the input, save it first
     if (this.inputText.trim()) {
-      await this.submitUserText();
+      const userBlock: Message = {
+        id: generateId(),
+        role: 'user',
+        senderId: this.persona?.id || 'user',
+        senderName: this.persona?.name || 'Author',
+        content: this.inputText.trim(),
+        timestamp: now(),
+        generatedImageRefs: [],
+        isPinnedAsMemory: false,
+        tokenCount: Math.ceil(this.inputText.trim().length / 4),
+      };
+      this.session.messages.push(userBlock);
+      this.inputText = '';
+      await this.saveSession();
     }
 
     this.isStreaming = true;
@@ -551,6 +814,9 @@ export class StoryModePage implements OnInit {
         this.lorebooks,
         this.connectionProfile.contextSize
       );
+
+      // Update memory injection indicator
+      this.injectedMemoryCount = assembled.injectedMemories.length;
 
       // Override the system prompt with story-specific instructions
       const llmMessages = this.llmProvider.convertMessages(
@@ -672,7 +938,7 @@ export class StoryModePage implements OnInit {
     const block = this.session.messages[index];
 
     const alert = await this.alertCtrl.create({
-      header: 'Edit Text',
+      header: block.role === 'user' ? 'Edit Direction' : 'Edit Text',
       inputs: [{
         name: 'content',
         type: 'textarea',
@@ -760,9 +1026,13 @@ export class StoryModePage implements OnInit {
     await alert.present();
   }
 
+  /** Export only AI-generated prose (not user directions) */
   async exportStory(): Promise<void> {
     if (!this.session) return;
-    const fullText = this.session.messages.map(m => m.content).join('\n\n');
+    const fullText = this.session.messages
+      .filter(m => m.role === 'assistant')
+      .map(m => m.content)
+      .join('\n\n');
     const blob = new Blob([fullText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -810,6 +1080,11 @@ export class StoryModePage implements OnInit {
 
   // ── Helpers ──
 
+  /**
+   * Build the story system prompt.
+   * Explicitly instructs the AI to treat user messages as author directions,
+   * not as story text to include verbatim.
+   */
   private buildStorySystemPrompt(): string {
     const charDescriptions = this.activeCharacters
       .map(c => `${c.name}: ${c.description || ''} ${c.personality || ''}`.trim())
@@ -828,9 +1103,11 @@ export class StoryModePage implements OnInit {
 ${povText} ${tenseText}
 
 Write prose fiction — descriptions, dialogue, actions, and inner thoughts. Do NOT break character or add meta-commentary.
-Continue the story naturally, maintaining consistency with what came before.
+Continue the story seamlessly from where the previous text left off. Maintain consistency with what came before.
 Keep your writing vivid, engaging, and immersive. Vary sentence length and structure.
-When writing dialogue, use quotation marks.`;
+When writing dialogue, use quotation marks.
+
+IMPORTANT: Messages from the user are author directions — they guide what should happen next in the story. Do NOT repeat or quote these directions verbatim. Instead, incorporate the guidance naturally into your continuation of the narrative. Each of your responses should read as a seamless continuation of the previous story text, as if it were the next page of a novel.`;
 
     if (this.scenario?.specialInstructions) {
       prompt += `\n\nScenario Instructions:\n${this.scenario.specialInstructions}`;
@@ -864,16 +1141,27 @@ When writing dialogue, use quotation marks.`;
     }
   }
 
+  /**
+   * Format prose content into book-style paragraphs.
+   * Double newlines become separate <p> elements with text-indent.
+   * Markdown-style bold/italic is converted.
+   */
   formatProse(content: string): string {
     if (!content) return '';
-    return content
+
+    let escaped = content
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/`(.+?)`/g, '<code>$1</code>')
-      .replace(/\n/g, '<br>');
+      .replace(/`(.+?)`/g, '<code>$1</code>');
+
+    // Split on double newlines into paragraphs
+    const paragraphs = escaped.split(/\n\s*\n/).filter(p => p.trim());
+    return paragraphs
+      .map(p => `<p class="book-para">${p.trim().replace(/\n/g, '<br>')}</p>`)
+      .join('');
   }
 
   trackByBlockIndex(index: number): number {

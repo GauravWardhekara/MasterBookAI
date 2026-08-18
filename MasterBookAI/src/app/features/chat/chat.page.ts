@@ -516,6 +516,9 @@ export class ChatPage implements OnInit {
         this.connectionProfile.contextSize
       );
 
+      // Update memory injection indicator
+      this.injectedMemoryCount = assembled.injectedMemories.length;
+
       // Convert to LLM format
       const llmMessages = this.llmProvider.convertMessages(
         assembled.messages,
