@@ -30,7 +30,8 @@ export class ConnectionService {
       updatedAt: now(),
       name: data.name || 'New Connection',
       type: data.type || 'local',
-      endpointUrl: data.endpointUrl || 'http://localhost:11434',
+      provider: data.provider || 'openai',
+      endpointUrl: data.endpointUrl || this.getDefaultUrl(data.provider || 'openai'),
       authMethod: data.authMethod || 'none',
       apiKey: data.apiKey,
       modelList: data.modelList || [],
@@ -75,44 +76,94 @@ export class ConnectionService {
     const url = this.normalizeUrl(profile.endpointUrl || '');
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
+    if (profile.provider === 'anthropic') {
+      if (profile.apiKey) headers['x-api-key'] = profile.apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+      try {
+        const response = await fetch(`${url}/v1/models`, { headers, signal: AbortSignal.timeout(10000) });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data && Array.isArray(data.data)) return data.data.map((m: any) => m.id);
+        }
+      } catch (e) {
+        // Fallback if Anthropic models API fails
+      }
+      return ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-haiku-20240307', 'claude-3-sonnet-20240229'];
+    }
+
+    if (profile.provider === 'gemini') {
+      try {
+        const response = await fetch(`${url}/v1beta/models?key=${profile.apiKey}`, { headers, signal: AbortSignal.timeout(10000) });
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const data = await response.json();
+        if (data.models && Array.isArray(data.models)) {
+          return data.models.map((m: any) => m.name.replace('models/', ''));
+        }
+      } catch (err) {
+        // Fallback
+      }
+      return ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-1.0-pro'];
+    }
+
     if (profile.authMethod === 'api-key' && profile.apiKey) {
       headers['Authorization'] = `Bearer ${profile.apiKey}`;
     } else if (profile.authMethod === 'bearer-token' && profile.apiKey) {
       headers['Authorization'] = `Bearer ${profile.apiKey}`;
     }
 
+    if (profile.provider === 'ollama') {
+      try {
+        const response = await fetch(`${url}/api/tags`, { headers, signal: AbortSignal.timeout(10000) });
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const data = await response.json();
+        if (data.models && Array.isArray(data.models)) {
+          return data.models.map((m: any) => m.name || m.model);
+        }
+        return [];
+      } catch (err) {
+        throw err;
+      }
+    }
+
+    if (profile.provider === 'lmstudio') {
+      let lastErr: any;
+      try {
+        const response = await fetch(`${url}/v1/models`, { headers, signal: AbortSignal.timeout(10000) });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data && Array.isArray(data.data)) return data.data.map((m: any) => m.id);
+        }
+      } catch (e) { lastErr = e; }
+      
+      try {
+        const response = await fetch(`${url}/api/v1/models`, { headers, signal: AbortSignal.timeout(10000) });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.models && Array.isArray(data.models)) return data.models.map((m: any) => m.key || m.id || m.name || m.model);
+        }
+      } catch (e) { lastErr = e; }
+      
+      if (lastErr) throw lastErr;
+      return [];
+    }
+
+    // Default OpenAI / vLLM / custom format
     try {
-      // Try OpenAI-compatible /v1/models endpoint
       const response = await fetch(`${url}/v1/models`, { headers, signal: AbortSignal.timeout(10000) });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
 
-      // OpenAI format: { data: [{ id: "model-name", ... }] }
       if (data.data && Array.isArray(data.data)) {
         return data.data.map((m: any) => m.id);
       }
-
-      // Ollama format: { models: [{ name: "model-name", ... }] }
       if (data.models && Array.isArray(data.models)) {
-        return data.models.map((m: any) => m.name || m.model);
+        return data.models.map((m: any) => m.name || m.model || m.id || m.key);
       }
-
       return [];
-    } catch (firstErr) {
-      // Fallback: try Ollama's /api/tags endpoint
-      try {
-        const response = await fetch(`${url}/api/tags`, { headers, signal: AbortSignal.timeout(10000) });
-        if (!response.ok) throw firstErr;
-        const data = await response.json();
-        if (data.models && Array.isArray(data.models)) {
-          return data.models.map((m: any) => m.name || m.model);
-        }
-        return [];
-      } catch {
-        throw firstErr;
-      }
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -131,5 +182,17 @@ export class ConnectionService {
   private normalizeUrl(url: string): string {
     // Remove trailing slashes
     return url.replace(/\/+$/, '');
+  }
+
+  private getDefaultUrl(provider: string): string {
+    switch (provider) {
+      case 'openai': return 'https://api.openai.com';
+      case 'anthropic': return 'https://api.anthropic.com';
+      case 'gemini': return 'https://generativelanguage.googleapis.com';
+      case 'lmstudio': return 'http://localhost:1234';
+      case 'ollama': return 'http://localhost:11434';
+      case 'vllm': return 'http://localhost:8000';
+      default: return 'http://localhost:11434';
+    }
   }
 }

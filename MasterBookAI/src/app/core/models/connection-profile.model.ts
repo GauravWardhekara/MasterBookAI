@@ -1,12 +1,15 @@
 import { BaseModel } from './base.model';
 import { SamplingOverrides } from './character.model';
 
+export type LLMProvider = 'openai' | 'anthropic' | 'ollama' | 'lmstudio' | 'vllm' | 'gemini' | 'custom';
+
 /**
  * Connection profile for an LLM backend.
  */
 export interface ConnectionProfile extends BaseModel {
   name: string;
   type: 'local' | 'cloud';
+  provider: LLMProvider;
   endpointUrl: string;
   authMethod: 'none' | 'api-key' | 'bearer-token';
   apiKey?: string;                    // stored encrypted via secure storage
@@ -42,6 +45,7 @@ export function createDefaultConnectionProfile(): Partial<ConnectionProfile> {
   return {
     name: '',
     type: 'local',
+    provider: 'openai',
     endpointUrl: 'http://localhost:11434',
     authMethod: 'none',
     modelList: [],

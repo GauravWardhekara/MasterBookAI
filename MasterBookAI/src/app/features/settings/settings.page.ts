@@ -81,6 +81,10 @@ import { ConnectionProfile, createDefaultConnectionProfile, ImageGenConfig } fro
             <!-- Expanded Details -->
             <div class="conn-details" *ngIf="expandedProfileId === p.id">
               <div class="conn-detail-row">
+                <span class="detail-label">Provider</span>
+                <span class="detail-value">{{ p.provider | titlecase }}</span>
+              </div>
+              <div class="conn-detail-row">
                 <span class="detail-label">Auth</span>
                 <span class="detail-value">{{ p.authMethod }}</span>
               </div>
@@ -165,6 +169,19 @@ import { ConnectionProfile, createDefaultConnectionProfile, ImageGenConfig } fro
               <span class="mb-chip" [class.active]="editorProfile.type === 'cloud'" (click)="editorProfile.type = 'cloud'">
                 <ion-icon name="cloud-done-outline"></ion-icon> Cloud
               </span>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>Provider</label>
+            <div class="toggle-group">
+              <span class="mb-chip" [class.active]="editorProfile.provider === 'openai'" (click)="editorProfile.provider = 'openai'">OpenAI</span>
+              <span class="mb-chip" [class.active]="editorProfile.provider === 'anthropic'" (click)="editorProfile.provider = 'anthropic'">Anthropic</span>
+              <span class="mb-chip" [class.active]="editorProfile.provider === 'gemini'" (click)="editorProfile.provider = 'gemini'">Gemini</span>
+              <span class="mb-chip" [class.active]="editorProfile.provider === 'ollama'" (click)="editorProfile.provider = 'ollama'">Ollama</span>
+              <span class="mb-chip" [class.active]="editorProfile.provider === 'lmstudio'" (click)="editorProfile.provider = 'lmstudio'">LM Studio</span>
+              <span class="mb-chip" [class.active]="editorProfile.provider === 'vllm'" (click)="editorProfile.provider = 'vllm'">vLLM</span>
+              <span class="mb-chip" [class.active]="editorProfile.provider === 'custom'" (click)="editorProfile.provider = 'custom'">Custom</span>
             </div>
           </div>
 
