@@ -3,13 +3,16 @@
   "version": "0.0.1",
   "author": "Ionic Framework",
   "homepage": "https://ionicframework.com/",
+  "main": "electron/main.js",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build --base-href ./",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "electron:start": "electron .",
+    "build:win": "ng build --base-href ./ && electron-packager . MasterBookAI --platform=win32 --arch=x64 --out=dist_electron --overwrite"
   },
   "private": true,
   "dependencies": {
@@ -21,6 +24,7 @@
     "@angular/platform-browser": "20.3.25",
     "@angular/platform-browser-dynamic": "20.3.25",
     "@angular/router": "20.3.25",
+    "@capacitor/android": "^8.4.2",
     "@capacitor/app": "8.1.1",
     "@capacitor/core": "8.4.2",
     "@capacitor/filesystem": "^8.1.2",
@@ -50,6 +54,9 @@
     "@types/jasmine": "~5.1.0",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "electron-packager": "^17.1.2",
     "eslint": "^9.16.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-jsdoc": "^48.2.1",
@@ -62,6 +69,29 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "typescript": "~5.9.0"
+  },
+  "build": {
+    "appId": "com.masterbookai.app",
+    "productName": "MasterBookAI",
+    "copyright": "Copyright © 2026 MasterBookAI",
+    "directories": {
+      "output": "dist_electron"
+    },
+    "files": [
+      "www/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "description": "An Ionic project"
 }

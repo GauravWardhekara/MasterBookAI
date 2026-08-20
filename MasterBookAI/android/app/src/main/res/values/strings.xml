@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MasterBookAI</string>
+    <string name="title_activity_main">MasterBookAI</string>
+    <string name="package_name">com.masterbookai.app</string>
+    <string name="custom_url_scheme">com.masterbookai.app</string>
+</resources>
