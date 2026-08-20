@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
   IonInput, IonTextarea, IonBackButton, IonButtons, IonChip,
-  ToastController, AlertController
+  ToastController, AlertController, ModalController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -20,6 +20,7 @@ import { ChatSessionService } from '../../../core/services/chat-session.service'
 import { Scenario, createDefaultScenario } from '../../../core/models/scenario.model';
 import { Character } from '../../../core/models/character.model';
 import { Lorebook } from '../../../core/models/lorebook.model';
+import { CharacterPickerModalComponent } from '../../../shared/components/character-picker-modal/character-picker-modal.component';
 
 @Component({
   selector: 'app-scenario-editor',
@@ -365,6 +366,7 @@ export class ScenarioEditorPage implements OnInit {
     private chatSessionService: ChatSessionService,
     private toastCtrl: ToastController,
     private alertCtrl: AlertController,
+    private modalCtrl: ModalController,
   ) {
     addIcons({
       saveOutline, addOutline, closeOutline, arrowBackOutline,
@@ -406,37 +408,29 @@ export class ScenarioEditorPage implements OnInit {
 
   // ── Characters ──
   async showCharacterPicker(): Promise<void> {
-    const available = this.allCharacters.filter(c => !this.scenario.characterIds?.includes(c.id));
-    if (available.length === 0) {
-      const toast = await this.toastCtrl.create({ message: 'No available characters. Create one first!', duration: 2000 });
-      await toast.present();
-      return;
-    }
-    const alert = await this.alertCtrl.create({
-      header: 'Select Characters',
-      inputs: available.map(c => ({
-        type: 'checkbox' as const,
-        label: c.name,
-        value: c.id,
-      })),
-      buttons: [
-        { text: 'Cancel', role: 'cancel' },
-        {
-          text: 'Add',
-          handler: (selectedIds: string[]) => {
-            for (const id of selectedIds) {
-              if (!this.scenario.characterIds) this.scenario.characterIds = [];
-              if (!this.scenario.characterRoles) this.scenario.characterRoles = {};
-              this.scenario.characterIds.push(id);
-              this.scenario.characterRoles[id] = 'npc';
-              const char = this.allCharacters.find(c => c.id === id);
-              if (char) this.selectedCharacters.push(char);
-            }
-          },
-        },
-      ],
+    const modal = await this.modalCtrl.create({
+      component: CharacterPickerModalComponent,
+      componentProps: {
+        excludeIds: this.scenario.characterIds || [],
+      },
     });
-    await alert.present();
+    await modal.present();
+
+    const { data, role } = await modal.onDidDismiss();
+
+    if (role === 'confirm' && data && Array.isArray(data)) {
+      for (const char of data as Character[]) {
+        if (!this.scenario.characterIds) this.scenario.characterIds = [];
+        if (!this.scenario.characterRoles) this.scenario.characterRoles = {};
+        if (!this.scenario.characterIds.includes(char.id)) {
+          this.scenario.characterIds.push(char.id);
+          this.scenario.characterRoles[char.id] = 'npc';
+          this.selectedCharacters.push(char);
+        }
+      }
+    } else if (role === 'create-new') {
+      // Navigation to /characters/new is handled by the modal itself
+    }
   }
 
   createNewCharacter(): void {
