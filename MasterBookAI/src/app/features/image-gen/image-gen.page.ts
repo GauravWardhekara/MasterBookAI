@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-  IonButtons, IonInput, IonChip,
+  IonButtons, IonToggle, IonFooter,
   AlertController, ToastController, ModalController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -12,7 +12,8 @@ import {
   arrowBackOutline, imageOutline, sparklesOutline, copyOutline,
   trashOutline, addOutline, closeOutline, settingsOutline,
   downloadOutline, refreshOutline, checkmarkOutline,
-  chevronDownOutline, chevronUpOutline, colorPaletteOutline
+  chevronDownOutline, chevronUpOutline, colorPaletteOutline,
+  helpCircleOutline, happyOutline, chevronForwardOutline
 } from 'ionicons/icons';
 import { ImageProviderService, ImageGenParams, TagExtractionResult } from '../../core/services/image-provider.service';
 import { ConnectionService } from '../../core/services/connection.service';
@@ -20,194 +21,122 @@ import { ChatSessionService } from '../../core/services/chat-session.service';
 import { ImageGenSessionConfig, createDefaultImageGenSessionConfig, GeneratedImage } from '../../core/models/image-gen-config.model';
 import { ImageGenConfig } from '../../core/models/connection-profile.model';
 import { Message } from '../../core/models/chat-session.model';
+import { ImageGenMoreSettingsComponent } from './image-gen-more-settings.component';
 
 @Component({
   selector: 'app-image-gen',
   template: `
-    <ion-header>
-      <ion-toolbar>
+    <ion-header class="ion-no-border ig-header">
+      <ion-toolbar class="transparent-toolbar">
         <ion-buttons slot="start">
-          <ion-button (click)="dismiss()">
-            <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+          <ion-button (click)="dismiss()" class="close-btn">
+            <ion-icon slot="icon-only" name="close-outline"></ion-icon>
           </ion-button>
         </ion-buttons>
-        <ion-title>
-          <span class="ig-title">
-            <ion-icon name="image-outline" class="title-icon"></ion-icon>
-            Generate Image
-          </span>
-        </ion-title>
+        <ion-title class="ig-title">Image Generation</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding">
-      <div class="ig-container mb-fade-in">
+    <ion-content class="ig-content ion-padding">
+      <div class="ig-form">
 
-        <!-- No Provider Warning -->
-        <div *ngIf="!activeConfig && !isLoading" class="no-provider-banner mb-fade-in">
-          <ion-icon name="color-palette-outline"></ion-icon>
-          <span>No image provider configured.</span>
-          <ion-button fill="clear" size="small" (click)="showProviderSetup()">
-            Set Up Provider
-          </ion-button>
+        <!-- Reference last prompt -->
+        <div class="ig-row align-center">
+          <div class="ig-label">Reference last prompt <ion-icon name="help-circle-outline"></ion-icon></div>
+          <ion-toggle [(ngModel)]="referenceLastPrompt" class="mb-toggle"></ion-toggle>
         </div>
 
-        <!-- Step 1: Scene Description -->
-        <div class="ig-section" *ngIf="step === 'extract'">
-          <div class="ig-section-header">
-            <div class="step-badge">1</div>
-            <span>Extract Scene Tags</span>
-          </div>
-          <p class="ig-section-desc">Analyze recent messages to auto-generate image tags</p>
-
-          <div class="extract-actions">
-            <ion-button class="mb-btn-primary" (click)="extractTags()" [disabled]="isExtracting">
-              <ion-icon slot="start" name="sparkles-outline"></ion-icon>
-              {{ isExtracting ? 'Extracting...' : 'Auto-Extract Tags' }}
-            </ion-button>
-            <ion-button class="mb-btn-secondary" (click)="skipToManual()">
-              Write Tags Manually
-            </ion-button>
-          </div>
-
-          <div *ngIf="sceneDescription" class="scene-description mb-fade-in">
-            <ion-icon name="sparkles-outline"></ion-icon>
-            <span>{{ sceneDescription }}</span>
-          </div>
+        <!-- Prompt -->
+        <div class="ig-row header-row mt-4">
+          <div class="ig-label">Prompt</div>
+          <div class="ig-action" (click)="reextractTags()">Regenerate</div>
+        </div>
+        <div class="ig-textarea-box mt-2">
+          <textarea [(ngModel)]="promptText" rows="7" class="ig-textarea" placeholder="Describe the image you want..."></textarea>
         </div>
 
-        <!-- Step 2: Edit Tags -->
-        <div class="ig-section" *ngIf="step === 'edit'">
-          <div class="ig-section-header">
-            <div class="step-badge">2</div>
-            <span>Edit Tags</span>
-          </div>
+        <!-- Negative Prompt -->
+        <div class="ig-accordion mt-4" (click)="isNegativePromptOpen = !isNegativePromptOpen">
+          <div class="ig-label">Negative Prompt</div>
+          <ion-icon [name]="isNegativePromptOpen ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+        </div>
+        <div class="ig-textarea-box mt-2" *ngIf="isNegativePromptOpen">
+          <textarea [(ngModel)]="negativePromptText" rows="3" class="ig-textarea" placeholder="What you don't want in the image..."></textarea>
+        </div>
 
-          <!-- Positive Tags -->
-          <div class="tag-section">
-            <label class="tag-label positive-label">
-              <ion-icon name="checkmark-outline"></ion-icon> Positive Tags
-            </label>
-            <div class="tag-chips">
-              <ion-chip *ngFor="let tag of positiveTags; let i = index"
-                        class="tag-chip positive"
-                        (click)="editTag('positive', i)">
-                {{ tag }}
-                <ion-icon name="close-outline" (click)="removeTag('positive', i, $event)"></ion-icon>
-              </ion-chip>
-              <ion-chip class="tag-chip add-chip" (click)="addTag('positive')">
-                <ion-icon name="add-outline"></ion-icon> Add
-              </ion-chip>
-            </div>
+        <!-- Model -->
+        <div class="ig-row header-row mt-4">
+          <div class="ig-label">Model</div>
+          <div class="ig-action" (click)="showProviderSetup()">Change</div>
+        </div>
+        <div class="ig-model-card mt-2">
+          <div class="model-thumb placeholder-thumb">
+            <ion-icon name="image-outline"></ion-icon>
           </div>
-
-          <!-- Negative Tags -->
-          <div class="tag-section">
-            <label class="tag-label negative-label">
-              <ion-icon name="close-outline"></ion-icon> Negative Tags
-            </label>
-            <div class="tag-chips">
-              <ion-chip *ngFor="let tag of negativeTags; let i = index"
-                        class="tag-chip negative"
-                        (click)="editTag('negative', i)">
-                {{ tag }}
-                <ion-icon name="close-outline" (click)="removeTag('negative', i, $event)"></ion-icon>
-              </ion-chip>
-              <ion-chip class="tag-chip add-chip" (click)="addTag('negative')">
-                <ion-icon name="add-outline"></ion-icon> Add
-              </ion-chip>
-            </div>
-          </div>
-
-          <!-- Quick Actions -->
-          <div class="quick-actions">
-            <ion-button fill="clear" size="small" (click)="copyTagsToClipboard()">
-              <ion-icon slot="start" name="copy-outline"></ion-icon>
-              Copy Tags
-            </ion-button>
-            <ion-button fill="clear" size="small" (click)="reextractTags()">
-              <ion-icon slot="start" name="refresh-outline"></ion-icon>
-              Re-extract
-            </ion-button>
+          <div class="model-info">
+            <div class="model-name">{{ sessionConfig.lastModel || activeConfig?.modelOrCheckpoint || 'Default Model' }}</div>
+            <div class="model-sub">{{ getProviderName() }}</div>
           </div>
         </div>
 
-        <!-- Step 3: Generation Settings -->
-        <div class="ig-section" *ngIf="step === 'edit'">
-          <div class="ig-section-header">
-            <div class="step-badge">3</div>
-            <span>Settings</span>
-            <ion-button fill="clear" size="small" (click)="showAdvanced = !showAdvanced">
-              <ion-icon slot="icon-only" [name]="showAdvanced ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
-            </ion-button>
-          </div>
-
-          <div class="settings-grid">
-            <div class="setting-item">
-              <label>Resolution</label>
-              <select [(ngModel)]="selectedResolution" (ngModelChange)="onResolutionChange()" class="native-select">
-                <option value="512x512">512 × 512</option>
-                <option value="512x768">512 × 768</option>
-                <option value="768x512">768 × 512</option>
-                <option value="768x768">768 × 768</option>
-                <option value="1024x1024">1024 × 1024</option>
-                <option value="1024x1792">1024 × 1792</option>
-                <option value="1792x1024">1792 × 1024</option>
-              </select>
-            </div>
-            <div class="setting-item">
-              <label>Count</label>
-              <select [(ngModel)]="sessionConfig.imageCount" class="native-select">
-                <option [ngValue]="1">1 image</option>
-                <option [ngValue]="2">2 images</option>
-                <option [ngValue]="4">4 images</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="settings-grid" *ngIf="showAdvanced">
-            <div class="setting-item">
-              <label>Steps</label>
-              <ion-input type="number" [(ngModel)]="sessionConfig.steps" min="1" max="150" class="mb-input compact"></ion-input>
-            </div>
-            <div class="setting-item">
-              <label>CFG Scale</label>
-              <ion-input type="number" [(ngModel)]="sessionConfig.cfgScale" min="1" max="30" step="0.5" class="mb-input compact"></ion-input>
-            </div>
-            <div class="setting-item full-width" *ngIf="activeConfig?.providerType !== 'openai'">
-              <label>Model / Checkpoint</label>
-              <ion-input [(ngModel)]="sessionConfig.lastModel" placeholder="e.g. sd_xl_base_1.0" class="mb-input compact"></ion-input>
-            </div>
-          </div>
-
-          <!-- Provider Info -->
-          <div class="provider-info" *ngIf="activeConfig">
-            <ion-icon [name]="getProviderIcon()"></ion-icon>
-            <span>{{ getProviderName() }}</span>
-            <span class="provider-url" *ngIf="activeConfig.endpointUrl">{{ activeConfig.endpointUrl }}</span>
+        <!-- Spells -->
+        <div class="ig-row header-row mt-4">
+          <div class="ig-label">Spells <span class="sub-text">(Selected 0/5)</span></div>
+          <div class="ig-action">Add more</div>
+        </div>
+        <div class="ig-spells-empty mt-2">
+          <div class="add-spell-btn">
+            <ion-icon name="add-outline"></ion-icon> Select spells
           </div>
         </div>
 
-        <!-- Generate Button -->
-        <div class="generate-section" *ngIf="step === 'edit'">
-          <ion-button class="mb-btn-primary generate-btn"
-                      [disabled]="positiveTags.length === 0 || isGenerating"
-                      (click)="generateImages()">
-            <ion-icon slot="start" name="sparkles-outline"></ion-icon>
-            {{ isGenerating ? 'Generating...' : (activeConfig?.providerType === 'copy-tags' ? 'Copy Tags to Clipboard' : 'Generate Image') }}
-          </ion-button>
+        <!-- ADetailer -->
+        <div class="ig-row align-center mt-4">
+          <div class="ig-label">ADetailer <ion-icon name="help-circle-outline"></ion-icon></div>
+          <ion-toggle [(ngModel)]="aDetailerEnabled" class="mb-toggle"></ion-toggle>
         </div>
 
-        <!-- Step 4: Results -->
-        <div class="ig-section" *ngIf="generatedImages.length > 0">
-          <div class="ig-section-header">
-            <div class="step-badge done">✓</div>
-            <span>Generated Images</span>
+        <!-- Canvas Size -->
+        <div class="ig-row flex-col mt-4">
+          <div class="ig-label mb-2">Canvas Size</div>
+          <div class="ig-select-wrapper">
+            <select [(ngModel)]="selectedResolution" (ngModelChange)="onResolutionChange()" class="ig-select">
+              <option value="512x512">Square (512 × 512)</option>
+              <option value="512x768">Portrait (512 × 768)</option>
+              <option value="768x512">Landscape (768 × 512)</option>
+              <option value="768x768">Square (768 × 768)</option>
+              <option value="1024x1024">Square (1024 × 1024)</option>
+              <option value="1024x1792">Portrait (1024 × 1792)</option>
+              <option value="1792x1024">Landscape (1792 × 1024)</option>
+            </select>
+            <ion-icon name="chevron-down-outline" class="select-icon"></ion-icon>
           </div>
+        </div>
 
+        <!-- Number of Images -->
+        <div class="ig-row flex-col mt-4">
+          <div class="ig-label mb-2">Number of Images</div>
+          <div class="ig-segments">
+            <div class="ig-segment" [class.active]="sessionConfig.imageCount === 1" (click)="sessionConfig.imageCount = 1">1</div>
+            <div class="ig-segment" [class.active]="sessionConfig.imageCount === 2" (click)="sessionConfig.imageCount = 2">2</div>
+            <div class="ig-segment" [class.active]="sessionConfig.imageCount === 4" (click)="sessionConfig.imageCount = 4">4</div>
+          </div>
+        </div>
+
+        <!-- More Settings -->
+        <div class="ig-accordion mt-4" (click)="openMoreSettings()">
+          <div class="ig-label">More Settings</div>
+          <ion-icon name="chevron-forward-outline"></ion-icon>
+        </div>
+
+        <!-- Results -->
+        <div class="ig-results mt-5" *ngIf="generatedImages.length > 0">
+          <div class="ig-row header-row mb-2">
+            <div class="ig-label">Generated Images</div>
+          </div>
           <div class="image-results">
             <div *ngFor="let img of generatedImages; let i = index"
-                 class="image-result-card mb-glass-card mb-fade-in"
+                 class="image-result-card mb-fade-in"
                  [style.animation-delay]="(i * 0.1) + 's'">
               <img [src]="img.imageUrl" alt="Generated image" class="result-image" />
               <div class="result-actions">
@@ -218,264 +147,189 @@ import { Message } from '../../core/models/chat-session.model';
                   <ion-icon slot="icon-only" name="checkmark-outline"></ion-icon>
                 </ion-button>
               </div>
-              <div class="result-meta">
-                {{ img.width }}×{{ img.height }} · {{ img.steps }} steps · CFG {{ img.cfgScale }}
-              </div>
             </div>
           </div>
         </div>
 
-        <!-- Tags Copied Confirmation (for copy-tags mode) -->
-        <div *ngIf="tagsCopied" class="tags-copied-banner mb-fade-in">
-          <ion-icon name="checkmark-outline"></ion-icon>
-          Tags copied to clipboard! Paste them into your preferred image generation tool.
-        </div>
       </div>
     </ion-content>
+
+    <ion-footer class="ig-footer ion-no-border">
+      <div class="show-next-time">
+        <div class="snt-text">
+          <div class="snt-title">Show Next Time</div>
+          <div class="snt-desc">You can always get access to these settings in the chat menu.</div>
+        </div>
+        <ion-toggle [(ngModel)]="showNextTime" color="success" class="mb-toggle success-toggle"></ion-toggle>
+      </div>
+      
+      <button class="ig-generate-btn" (click)="generateImages()" [disabled]="isGenerating || !promptText.trim()">
+        <span>{{ isGenerating ? 'Generating...' : 'Generate' }}</span>
+        <span class="cost-badge" *ngIf="!isGenerating"><ion-icon name="happy-outline"></ion-icon> 12</span>
+      </button>
+    </ion-footer>
   `,
   styles: [`
-    .ig-container { max-width: 600px; margin: 0 auto; }
+    .ig-header { background: #1c1c1e; }
+    .transparent-toolbar { --background: transparent; color: white; }
+    .close-btn { --color: white; margin-left: 8px; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+    .ig-title { text-align: center; font-weight: 600; font-size: 17px; margin-right: 48px; }
 
-    .ig-title {
-      display: flex; align-items: center; gap: 8px;
-      font-weight: 700;
+    .ig-content { --background: #1c1c1e; }
+    .ig-form { max-width: 600px; margin: 0 auto; color: white; padding-bottom: 24px; }
+
+    /* Layout Utils */
+    .mt-2 { margin-top: 8px; }
+    .mt-4 { margin-top: 24px; }
+    .mt-5 { margin-top: 32px; }
+    .mb-2 { margin-bottom: 8px; }
+    
+    .ig-row { display: flex; justify-content: space-between; }
+    .align-center { align-items: center; }
+    .flex-col { flex-direction: column; }
+    .header-row { align-items: flex-end; margin-bottom: 4px; }
+
+    .ig-label { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .ig-label ion-icon { font-size: 18px; color: #a1a1aa; }
+    .ig-action { font-size: 13px; color: #a1a1aa; cursor: pointer; }
+    .sub-text { font-weight: 400; color: #a1a1aa; font-size: 13px; }
+
+    /* Toggle overrides */
+    .mb-toggle { --handle-background: white; --track-background-checked: #eab308; padding-right: 2px; }
+    .success-toggle { --track-background-checked: #22c55e; }
+
+    /* Textareas */
+    .ig-textarea-box {
+      background: #27272a; border-radius: 12px; padding: 12px;
     }
-    .title-icon { color: var(--mb-accent); font-size: 20px; }
-
-    .no-provider-banner {
-      display: flex; align-items: center; gap: 8px;
-      padding: 12px 16px; margin-bottom: 16px;
-      border-radius: var(--mb-radius-md);
-      background: rgba(245, 158, 11, 0.08);
-      border: 1px solid rgba(245, 158, 11, 0.2);
-      font-size: 13px; color: var(--mb-text-secondary);
+    .ig-textarea {
+      width: 100%; background: transparent; border: none; color: white; 
+      font-size: 15px; line-height: 1.5; outline: none; resize: none;
     }
-    .no-provider-banner ion-icon { color: var(--mb-accent); font-size: 20px; }
+    .ig-textarea::placeholder { color: #71717a; }
 
-    .ig-section {
-      background: var(--mb-bg-card);
-      border: 1px solid var(--mb-border);
-      border-radius: var(--mb-radius-lg);
-      padding: 16px 18px;
-      margin-bottom: 14px;
+    /* Accordion headers */
+    .ig-accordion {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 4px 0; cursor: pointer;
     }
+    .ig-accordion ion-icon { color: #a1a1aa; font-size: 20px; }
 
-    .ig-section-header {
-      display: flex; align-items: center; gap: 10px;
-      font-weight: 700; font-size: 15px;
-      color: var(--mb-text-primary);
-      margin-bottom: 8px;
+    /* Model Card */
+    .ig-model-card {
+      background: #27272a; border-radius: 12px; padding: 12px;
+      display: flex; align-items: center; gap: 12px;
     }
-
-    .step-badge {
-      width: 24px; height: 24px;
-      display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(135deg, var(--mb-primary), var(--mb-primary-dark));
-      color: white; font-size: 12px; font-weight: 800;
-      border-radius: 50%;
+    .placeholder-thumb {
+      width: 48px; height: 48px; border-radius: 8px;
+      background: #3f3f46; display: flex; align-items: center; justify-content: center;
     }
-    .step-badge.done {
-      background: linear-gradient(135deg, var(--mb-success), #059669);
-    }
+    .placeholder-thumb ion-icon { color: #a1a1aa; font-size: 24px; }
+    .model-info { display: flex; flex-direction: column; gap: 2px; }
+    .model-name { font-size: 14px; font-weight: 500; }
+    .model-sub { font-size: 12px; color: #a1a1aa; }
 
-    .ig-section-desc {
-      font-size: 13px; color: var(--mb-text-muted);
-      margin: 0 0 12px 34px;
-    }
-
-    .extract-actions {
-      display: flex; flex-direction: column; gap: 8px;
-      align-items: center; padding: 12px 0;
-    }
-
-    .mb-btn-secondary {
-      --background: var(--mb-bg-elevated);
-      --border-radius: var(--mb-radius-md);
-      --color: var(--mb-text-primary);
-      border: 1px solid var(--mb-border);
-    }
-
-    .scene-description {
-      display: flex; align-items: flex-start; gap: 8px;
-      padding: 10px 14px; margin-top: 12px;
-      background: rgba(167, 139, 250, 0.06);
-      border: 1px solid rgba(167, 139, 250, 0.15);
-      border-radius: var(--mb-radius-md);
-      font-size: 13px; color: var(--mb-text-secondary);
-      font-style: italic;
-    }
-    .scene-description ion-icon { color: var(--mb-primary); font-size: 16px; flex-shrink: 0; margin-top: 2px; }
-
-    /* Tags */
-    .tag-section { margin-bottom: 14px; }
-
-    .tag-label {
-      display: flex; align-items: center; gap: 4px;
-      font-size: 12px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.5px;
-      margin-bottom: 6px;
-    }
-    .tag-label ion-icon { font-size: 14px; }
-    .positive-label { color: var(--mb-success); }
-    .negative-label { color: var(--mb-danger); }
-
-    .tag-chips {
-      display: flex; flex-wrap: wrap; gap: 6px;
+    /* Spells */
+    .ig-spells-empty { display: flex; align-items: center; justify-content: flex-start; }
+    .add-spell-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 10px 16px; background: #27272a; border-radius: 8px;
+      font-size: 13px; color: #a1a1aa; cursor: pointer;
     }
 
-    .tag-chip {
-      font-size: 12px; height: auto;
-      padding: 3px 10px;
-      border-radius: var(--mb-radius-full);
-      cursor: pointer;
-      transition: all 150ms ease;
+    /* Select Dropdown */
+    .ig-select-wrapper { position: relative; }
+    .ig-select {
+      width: 100%; appearance: none; background: #27272a; color: white;
+      border: 1px solid #3f3f46; border-radius: 12px; padding: 14px 16px;
+      font-size: 15px; outline: none; cursor: pointer;
     }
-    .tag-chip:hover { transform: translateY(-1px); }
-
-    .tag-chip.positive {
-      background: rgba(52, 211, 153, 0.1);
-      color: var(--mb-success);
-      border: 1px solid rgba(52, 211, 153, 0.3);
-    }
-    .tag-chip.negative {
-      background: rgba(248, 113, 113, 0.1);
-      color: var(--mb-danger);
-      border: 1px solid rgba(248, 113, 113, 0.3);
-    }
-    .tag-chip ion-icon {
-      font-size: 12px; margin-left: 4px;
-      cursor: pointer; opacity: 0.6;
-    }
-    .tag-chip ion-icon:hover { opacity: 1; }
-
-    .add-chip {
-      background: var(--mb-bg-elevated);
-      color: var(--mb-text-muted);
-      border: 1px dashed var(--mb-border);
-    }
-    .add-chip ion-icon { font-size: 14px; margin: 0; }
-
-    .quick-actions {
-      display: flex; gap: 4px; justify-content: flex-end;
+    .select-icon {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      color: #a1a1aa; pointer-events: none;
     }
 
-    /* Settings */
-    .settings-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 10px; margin-bottom: 10px;
+    /* Segments */
+    .ig-segments {
+      display: flex; background: transparent; gap: 12px;
     }
-    .setting-item { display: flex; flex-direction: column; gap: 4px; }
-    .setting-item label {
-      font-size: 11px; font-weight: 600;
-      color: var(--mb-text-muted); text-transform: uppercase;
-      letter-spacing: 0.3px;
+    .ig-segment {
+      flex: 1; text-align: center; padding: 14px 0;
+      background: #27272a; border: 1px solid #3f3f46; border-radius: 12px;
+      font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s;
     }
-    .setting-item.full-width { grid-column: 1 / -1; }
-
-    .native-select {
-      width: 100%; padding: 8px 10px;
-      background: var(--mb-bg-input); color: var(--mb-text-primary);
-      border: 1px solid var(--mb-border); border-radius: var(--mb-radius-sm);
-      font-size: 13px; appearance: auto;
+    .ig-segment.active {
+      background: transparent; border-color: #eab308; color: #eab308;
     }
 
-    .compact { --padding-start: 10px; --padding-end: 10px; font-size: 13px; }
-
-    .provider-info {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 12px; color: var(--mb-text-muted);
-      padding: 6px 10px; margin-top: 8px;
-      background: var(--mb-bg-elevated);
-      border-radius: var(--mb-radius-sm);
+    /* Settings Grid */
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .setting-item { display: flex; flex-direction: column; gap: 6px; }
+    .setting-item label { font-size: 12px; color: #a1a1aa; }
+    .ig-input {
+      --background: #27272a; --color: white; border-radius: 8px;
+      --padding-start: 12px; --padding-end: 12px;
     }
-    .provider-info ion-icon { color: var(--mb-primary); font-size: 16px; }
-    .provider-url { font-family: monospace; font-size: 11px; color: var(--mb-primary); margin-left: auto; }
-
-    /* Generate */
-    .generate-section {
-      text-align: center; margin: 8px 0 16px;
-    }
-    .generate-btn {
-      --padding-start: 32px; --padding-end: 32px;
-      font-weight: 700; font-size: 15px;
-    }
+    .full-width { grid-column: 1 / -1; }
 
     /* Results */
-    .image-results {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-    }
+    .image-results { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .image-result-card { background: #27272a; border-radius: 12px; overflow: hidden; }
+    .result-image { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+    .result-actions { display: flex; justify-content: center; padding: 6px; border-top: 1px solid #3f3f46; }
 
-    .image-result-card {
-      overflow: hidden; padding: 0; cursor: pointer;
+    /* Footer */
+    .ig-footer { background: #1c1c1e; padding: 16px; border-top: 1px solid #27272a; }
+    .show-next-time { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .snt-title { font-size: 15px; font-weight: 600; color: white; margin-bottom: 2px; }
+    .snt-desc { font-size: 12px; color: #a1a1aa; }
+    
+    .ig-generate-btn {
+      width: 100%; background: #eab308; color: black; border: none; border-radius: 24px;
+      padding: 16px; font-size: 16px; font-weight: 700; display: flex; justify-content: center;
+      align-items: center; gap: 8px; position: relative; cursor: pointer;
     }
-
-    .result-image {
-      width: 100%; aspect-ratio: 1; object-fit: cover;
-      display: block;
-    }
-
-    .result-actions {
-      display: flex; justify-content: center; gap: 4px;
-      padding: 6px 8px;
-      border-top: 1px solid var(--mb-border);
-    }
-
-    .result-meta {
-      text-align: center; font-size: 10px;
-      color: var(--mb-text-muted); padding: 0 8px 8px;
-    }
-
-    .tags-copied-banner {
-      display: flex; align-items: center; gap: 8px;
-      padding: 14px 16px;
-      background: rgba(52, 211, 153, 0.08);
-      border: 1px solid rgba(52, 211, 153, 0.3);
-      border-radius: var(--mb-radius-md);
-      font-size: 14px; color: var(--mb-success);
-      font-weight: 500;
-    }
-    .tags-copied-banner ion-icon { font-size: 20px; }
-
-    @media (max-width: 400px) {
-      .settings-grid { grid-template-columns: 1fr; }
-      .image-results { grid-template-columns: 1fr; }
+    .ig-generate-btn:disabled { opacity: 0.6; }
+    .cost-badge {
+      position: absolute; right: 16px; display: flex; align-items: center; gap: 4px;
+      font-weight: 600; font-size: 14px;
     }
   `],
   imports: [
     CommonModule, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonButtons, IonInput, IonChip
+    IonButtons, IonToggle, IonFooter
   ],
 })
 export class ImageGenPage implements OnInit {
-  // Input props — set by parent when used as a modal
   @Input() messages: Message[] = [];
   @Input() sessionId?: string;
   @Input() linkedMessageId?: string;
 
-  step: 'extract' | 'edit' = 'extract';
   isLoading = true;
   isExtracting = false;
   isGenerating = false;
-  showAdvanced = false;
+  
+  // UI States
+  referenceLastPrompt = true;
+  isNegativePromptOpen = false;
+  aDetailerEnabled = false;
+  showNextTime = true;
   tagsCopied = false;
 
   activeConfig?: ImageGenConfig;
   sessionConfig: ImageGenSessionConfig = createDefaultImageGenSessionConfig();
-  selectedResolution = '512x512';
+  selectedResolution = '1024x1024';
 
-  positiveTags: string[] = [];
-  negativeTags: string[] = [];
-  sceneDescription = '';
+  // Form Data
+  promptText = '';
+  negativePromptText = '';
   generatedImages: GeneratedImage[] = [];
 
   constructor(
     private imageProvider: ImageProviderService,
-    private connectionService: ConnectionService,
     private chatSessionService: ChatSessionService,
     private modalCtrl: ModalController,
-    private alertCtrl: AlertController,
     private toastCtrl: ToastController,
     private router: Router,
   ) {
@@ -483,163 +337,76 @@ export class ImageGenPage implements OnInit {
       arrowBackOutline, imageOutline, sparklesOutline, copyOutline,
       trashOutline, addOutline, closeOutline, settingsOutline,
       downloadOutline, refreshOutline, checkmarkOutline,
-      chevronDownOutline, chevronUpOutline, colorPaletteOutline
+      chevronDownOutline, chevronUpOutline, colorPaletteOutline,
+      helpCircleOutline, happyOutline, chevronForwardOutline
     });
   }
 
   async ngOnInit(): Promise<void> {
     this.isLoading = true;
-
-    // Load config
     this.activeConfig = await this.imageProvider.getDefaultConfig();
     this.sessionConfig = this.imageProvider.getDefaultSessionConfig();
     this.selectedResolution = `${this.sessionConfig.width}x${this.sessionConfig.height}`;
 
-    // Apply negative prompt defaults
+    // Initialize Negative Prompt
     if (this.activeConfig?.negativePromptDefaults) {
-      this.negativeTags = this.activeConfig.negativePromptDefaults.split(',').map(t => t.trim()).filter(t => t);
+      this.negativePromptText = this.activeConfig.negativePromptDefaults;
     } else {
-      this.negativeTags = this.sessionConfig.negativePrompt.split(',').map(t => t.trim()).filter(t => t);
+      this.negativePromptText = this.sessionConfig.negativePrompt;
+    }
+
+    // Auto-extract tags if messages exist and we don't have a prompt yet
+    if (this.messages.length > 0 && !this.promptText) {
+      await this.extractTags();
     }
 
     this.isLoading = false;
   }
 
-  // ── STEP 1: TAG EXTRACTION ──
-
   async extractTags(): Promise<void> {
-    if (this.messages.length === 0) {
-      const toast = await this.toastCtrl.create({
-        message: 'No messages to extract tags from',
-        duration: 2000,
-        color: 'warning',
-      });
-      await toast.present();
-      this.skipToManual();
-      return;
-    }
-
     this.isExtracting = true;
-
     try {
       const result = await this.imageProvider.extractTags(this.messages);
-      this.positiveTags = result.tags;
+      this.promptText = result.tags.join(', ');
       if (result.negativeTags.length > 0) {
-        this.negativeTags = result.negativeTags;
+        this.negativePromptText = result.negativeTags.join(', ');
       }
-      this.sceneDescription = result.description;
-      this.step = 'edit';
     } catch (err: any) {
-      const toast = await this.toastCtrl.create({
-        message: `Extraction failed: ${err.message}`,
-        duration: 3000,
-        color: 'danger',
-      });
-      await toast.present();
+      console.warn('Tag extraction failed', err);
     } finally {
       this.isExtracting = false;
     }
   }
 
-  skipToManual(): void {
-    this.step = 'edit';
-    if (this.positiveTags.length === 0) {
-      this.positiveTags = ['1person', 'detailed'];
-    }
-  }
-
   async reextractTags(): Promise<void> {
-    this.step = 'extract';
+    if (this.messages.length === 0) {
+      const toast = await this.toastCtrl.create({
+        message: 'No messages to extract tags from.',
+        duration: 2000, color: 'warning',
+      });
+      await toast.present();
+      return;
+    }
     await this.extractTags();
   }
 
-  // ── STEP 2: TAG EDITING ──
-
-  async addTag(type: 'positive' | 'negative'): Promise<void> {
-    const alert = await this.alertCtrl.create({
-      header: `Add ${type} tag`,
-      inputs: [{ name: 'tag', type: 'text', placeholder: 'e.g. anime_style, forest' }],
-      buttons: [
-        { text: 'Cancel', role: 'cancel' },
-        {
-          text: 'Add',
-          handler: (data) => {
-            if (data.tag?.trim()) {
-              const tags = data.tag.trim().split(',').map((t: string) => t.trim()).filter((t: string) => t);
-              if (type === 'positive') {
-                this.positiveTags.push(...tags);
-              } else {
-                this.negativeTags.push(...tags);
-              }
-            }
-          },
-        },
-      ],
+  async openMoreSettings() {
+    const modal = await this.modalCtrl.create({
+      component: ImageGenMoreSettingsComponent,
+      componentProps: { config: this.sessionConfig }
     });
-    await alert.present();
-  }
-
-  async editTag(type: 'positive' | 'negative', index: number): Promise<void> {
-    const currentTag = type === 'positive' ? this.positiveTags[index] : this.negativeTags[index];
-
-    const alert = await this.alertCtrl.create({
-      header: 'Edit Tag',
-      inputs: [{ name: 'tag', type: 'text', value: currentTag }],
-      buttons: [
-        { text: 'Cancel', role: 'cancel' },
-        {
-          text: 'Save',
-          handler: (data) => {
-            if (data.tag?.trim()) {
-              if (type === 'positive') {
-                this.positiveTags[index] = data.tag.trim();
-              } else {
-                this.negativeTags[index] = data.tag.trim();
-              }
-            }
-          },
-        },
-      ],
-    });
-    await alert.present();
-  }
-
-  removeTag(type: 'positive' | 'negative', index: number, event: Event): void {
-    event.stopPropagation();
-    if (type === 'positive') {
-      this.positiveTags.splice(index, 1);
-    } else {
-      this.negativeTags.splice(index, 1);
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+    if (data?.config) {
+      this.sessionConfig = data.config;
+      this.imageProvider.saveSessionConfig(this.sessionConfig);
     }
   }
-
-  async copyTagsToClipboard(): Promise<void> {
-    await this.imageProvider.copyTagsToClipboard(this.positiveTags, this.negativeTags);
-    const toast = await this.toastCtrl.create({
-      message: '📋 Tags copied to clipboard!',
-      duration: 2000,
-      color: 'success',
-    });
-    await toast.present();
-  }
-
-  // ── STEP 3: SETTINGS ──
 
   onResolutionChange(): void {
     const [w, h] = this.selectedResolution.split('x').map(Number);
     this.sessionConfig.width = w;
     this.sessionConfig.height = h;
-  }
-
-  getProviderIcon(): string {
-    switch (this.activeConfig?.providerType) {
-      case 'openai': return 'sparkles-outline';
-      case 'stability': return 'image-outline';
-      case 'a1111':
-      case 'comfyui': return 'settings-outline';
-      case 'copy-tags': return 'copy-outline';
-      default: return 'color-palette-outline';
-    }
   }
 
   getProviderName(): string {
@@ -649,29 +416,27 @@ export class ImageGenPage implements OnInit {
       case 'a1111': return 'Automatic1111';
       case 'comfyui': return 'ComfyUI';
       case 'copy-tags': return 'Copy Tags Only';
-      default: return 'Unknown';
+      default: return 'No Provider Setup';
     }
   }
 
-  // ── STEP 4: GENERATION ──
-
   async generateImages(): Promise<void> {
-    if (this.positiveTags.length === 0) return;
+    const positiveTags = this.promptText.split(',').map(t => t.trim()).filter(t => t);
+    const negativeTags = this.negativePromptText.split(',').map(t => t.trim()).filter(t => t);
 
-    // For copy-tags mode, just copy and show confirmation
+    if (positiveTags.length === 0) return;
+
     if (this.activeConfig?.providerType === 'copy-tags') {
-      await this.copyTagsToClipboard();
+      await this.imageProvider.copyTagsToClipboard(positiveTags, negativeTags);
       this.tagsCopied = true;
       this.imageProvider.saveSessionConfig(this.sessionConfig);
+      const toast = await this.toastCtrl.create({ message: 'Tags copied to clipboard!', duration: 2000, color: 'success' });
+      await toast.present();
       return;
     }
 
     if (!this.activeConfig) {
-      const toast = await this.toastCtrl.create({
-        message: 'No image provider configured',
-        duration: 2000,
-        color: 'danger',
-      });
+      const toast = await this.toastCtrl.create({ message: 'No image provider configured.', duration: 2000, color: 'danger' });
       await toast.present();
       return;
     }
@@ -691,39 +456,21 @@ export class ImageGenPage implements OnInit {
         stylePreset: this.sessionConfig.stylePreset,
       };
 
-      const images = await this.imageProvider.generate(
-        this.positiveTags,
-        this.negativeTags,
-        params,
-        this.activeConfig
-      );
-
+      const images = await this.imageProvider.generate(positiveTags, negativeTags, params, this.activeConfig);
       this.generatedImages = images;
-
-      // Save session config for persistence
       this.imageProvider.saveSessionConfig(this.sessionConfig);
 
       if (images.length > 0) {
-        const toast = await this.toastCtrl.create({
-          message: `🎨 ${images.length} image${images.length > 1 ? 's' : ''} generated!`,
-          duration: 2000,
-          color: 'success',
-        });
+        const toast = await this.toastCtrl.create({ message: `🎨 ${images.length} image(s) generated!`, duration: 2000, color: 'success' });
         await toast.present();
       }
     } catch (err: any) {
-      const toast = await this.toastCtrl.create({
-        message: `Generation failed: ${err.message}`,
-        duration: 4000,
-        color: 'danger',
-      });
+      const toast = await this.toastCtrl.create({ message: `Generation failed: ${err.message}`, duration: 4000, color: 'danger' });
       await toast.present();
     } finally {
       this.isGenerating = false;
     }
   }
-
-  // ── IMAGE ACTIONS ──
 
   downloadImage(img: GeneratedImage): void {
     const a = document.createElement('a');
@@ -734,15 +481,11 @@ export class ImageGenPage implements OnInit {
 
   async attachToMessage(img: GeneratedImage): Promise<void> {
     if (!this.sessionId || !this.linkedMessageId) {
-      const toast = await this.toastCtrl.create({
-        message: 'Image generated! You can download it.',
-        duration: 2000,
-      });
+      const toast = await this.toastCtrl.create({ message: 'Image generated! You can download it.', duration: 2000 });
       await toast.present();
       return;
     }
 
-    // Attach image reference to the message
     img.linkedMessageId = this.linkedMessageId;
     img.linkedSessionId = this.sessionId;
 
@@ -751,30 +494,18 @@ export class ImageGenPage implements OnInit {
       if (session) {
         const msg = session.messages.find(m => m.id === this.linkedMessageId);
         if (msg) {
+          msg.generatedImageRefs = msg.generatedImageRefs || [];
           msg.generatedImageRefs.push(img.imageUrl);
-          await this.chatSessionService.updateSession(this.sessionId, {
-            messages: session.messages,
-          });
+          await this.chatSessionService.updateSession(this.sessionId, { messages: session.messages });
         }
       }
-
-      const toast = await this.toastCtrl.create({
-        message: '🖼️ Image attached to message!',
-        duration: 2000,
-        color: 'success',
-      });
+      const toast = await this.toastCtrl.create({ message: '🖼️ Image attached to message!', duration: 2000, color: 'success' });
       await toast.present();
     } catch (err: any) {
-      const toast = await this.toastCtrl.create({
-        message: `Attach failed: ${err.message}`,
-        duration: 3000,
-        color: 'danger',
-      });
+      const toast = await this.toastCtrl.create({ message: `Attach failed: ${err.message}`, duration: 3000, color: 'danger' });
       await toast.present();
     }
   }
-
-  // ── NAVIGATION ──
 
   showProviderSetup(): void {
     this.router.navigateByUrl('/settings');
@@ -783,7 +514,6 @@ export class ImageGenPage implements OnInit {
 
   dismiss(): void {
     this.modalCtrl.dismiss().catch(() => {
-      // If not in a modal, navigate back
       this.router.navigateByUrl('/gallery');
     });
   }
