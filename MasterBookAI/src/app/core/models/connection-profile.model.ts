@@ -1,7 +1,7 @@
 import { BaseModel } from './base.model';
 import { SamplingOverrides } from './character.model';
 
-export type LLMProvider = 'openai' | 'anthropic' | 'ollama' | 'lmstudio' | 'vllm' | 'gemini' | 'custom';
+export type LLMProvider = 'openai' | 'anthropic' | 'ollama' | 'lmstudio' | 'vllm' | 'gemini' | 'huggingface' | 'custom';
 
 /**
  * Connection profile for an LLM backend.
