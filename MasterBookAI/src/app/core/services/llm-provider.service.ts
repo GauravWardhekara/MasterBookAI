@@ -16,6 +16,7 @@ export interface CompletionOptions {
   topK?: number;
   maxTokens?: number;
   repetitionPenalty?: number;
+  minP?: number;
   stop?: string[];
   stream?: boolean;
 }

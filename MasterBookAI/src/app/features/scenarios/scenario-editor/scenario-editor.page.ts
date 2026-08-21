@@ -17,6 +17,7 @@ import { ScenarioService } from '../../../core/services/scenario.service';
 import { CharacterService } from '../../../core/services/character.service';
 import { LorebookService } from '../../../core/services/lorebook.service';
 import { ChatSessionService } from '../../../core/services/chat-session.service';
+import { ChatSetupModalComponent } from '../../../shared/components/chat-setup-modal/chat-setup-modal.component';
 import { Scenario, createDefaultScenario } from '../../../core/models/scenario.model';
 import { Character } from '../../../core/models/character.model';
 import { Lorebook } from '../../../core/models/lorebook.model';
@@ -533,19 +534,33 @@ export class ScenarioEditorPage implements OnInit {
   }
 
   async startChat(): Promise<void> {
+    if (!this.isEditing || !this.scenario) return;
+
     // Save scenario first if there are changes
     if (this.scenarioId) {
       await this.scenarioService.updateScenario(this.scenarioId, this.scenario);
     }
 
-    // Create a new chat session from this scenario
+    const modal = await this.modalCtrl.create({
+      component: ChatSetupModalComponent,
+      componentProps: { isEditMode: false }
+    });
+    
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+    
+    if (!data) return; // User cancelled
+
     const session = await this.chatSessionService.createSession({
-      scenarioId: this.scenarioId,
+      scenarioId: this.scenario.id,
       activeCharacterIds: this.scenario.characterIds || [],
       mode: this.scenario.defaultMode || 'chat',
       title: this.scenario.title || 'New Chat',
+      activeModel: data.model,
+      activePresetId: data.presetId,
+      activeSystemPrompt: data.systemPrompt,
+      activeSamplingOverrides: data.params
     });
-
     const routePrefix = this.scenario.defaultMode === 'story' ? '/story/' : '/chat/';
     this.router.navigateByUrl(routePrefix + session.id);
   }

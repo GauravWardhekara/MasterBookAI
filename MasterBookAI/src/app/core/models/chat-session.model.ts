@@ -1,4 +1,5 @@
 import { BaseModel } from './base.model';
+import { SamplingOverrides } from './character.model';
 
 /**
  * A chat or story session.
@@ -17,6 +18,12 @@ export interface ChatSession extends BaseModel {
   thumbnailImage?: string;            // manually uploaded
   isFavorite: boolean;
   tags: string[];
+
+  // Active configuration for this session
+  activeModel?: string;
+  activePresetId?: string;
+  activeSystemPrompt?: string;
+  activeSamplingOverrides?: SamplingOverrides;
 }
 
 /**

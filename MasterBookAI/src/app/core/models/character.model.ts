@@ -36,6 +36,7 @@ export interface SamplingOverrides {
   topK?: number;
   repetitionPenalty?: number;
   maxTokens?: number;
+  minP?: number;
 }
 
 /**

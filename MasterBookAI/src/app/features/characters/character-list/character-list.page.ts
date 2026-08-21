@@ -3,16 +3,17 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
+  IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons, IonIcon,
   IonSearchbar, IonFab, IonFabButton,
-  AlertController
+  AlertController, ModalController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
-  addOutline, createOutline, trashOutline, personOutline, searchOutline
+  addOutline, createOutline, trashOutline, personOutline, searchOutline, cloudDownloadOutline
 } from 'ionicons/icons';
 import { CharacterService } from '../../../core/services/character.service';
 import { Character } from '../../../core/models/character.model';
+import { CharacterImportModalComponent } from '../../../shared/components/character-import-modal/character-import-modal.component';
 
 @Component({
   selector: 'app-character-list',
@@ -20,9 +21,14 @@ import { Character } from '../../../core/models/character.model';
     <ion-header>
       <ion-toolbar>
         <ion-title>Characters</ion-title>
-        <ion-button slot="end" fill="clear" (click)="navigateTo('/characters/new')">
-          <ion-icon slot="icon-only" name="add-outline"></ion-icon>
-        </ion-button>
+        <ion-buttons slot="end">
+          <ion-button fill="clear" (click)="openImportModal()" title="Import Character Card">
+            <ion-icon slot="icon-only" name="cloud-download-outline"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" (click)="navigateTo('/characters/new')">
+            <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
       <ion-toolbar>
         <ion-searchbar
@@ -166,7 +172,7 @@ import { Character } from '../../../core/models/character.model';
   imports: [
     CommonModule, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonSearchbar, IonFab, IonFabButton
+    IonSearchbar, IonFab, IonFabButton, IonButtons
   ],
 })
 export class CharacterListPage implements OnInit {
@@ -177,8 +183,9 @@ export class CharacterListPage implements OnInit {
     private router: Router,
     private characterService: CharacterService,
     private alertCtrl: AlertController,
+    private modalCtrl: ModalController,
   ) {
-    addIcons({ addOutline, createOutline, trashOutline, personOutline, searchOutline });
+    addIcons({ addOutline, createOutline, trashOutline, personOutline, searchOutline, cloudDownloadOutline });
   }
 
   async ngOnInit(): Promise<void> {
@@ -193,6 +200,17 @@ export class CharacterListPage implements OnInit {
     if (this.searchQuery.trim()) {
       this.characters = await this.characterService.searchCharacters(this.searchQuery);
     } else {
+      await this.loadCharacters();
+    }
+  }
+
+  async openImportModal(): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: CharacterImportModalComponent,
+    });
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+    if (data?.imported) {
       await this.loadCharacters();
     }
   }

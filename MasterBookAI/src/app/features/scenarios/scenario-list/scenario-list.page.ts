@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
   IonSearchbar, IonFab, IonFabButton,
-  AlertController, ToastController
+  AlertController, ToastController, ModalController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -16,6 +16,7 @@ import { ScenarioService } from '../../../core/services/scenario.service';
 import { CharacterService } from '../../../core/services/character.service';
 import { LorebookService } from '../../../core/services/lorebook.service';
 import { ChatSessionService } from '../../../core/services/chat-session.service';
+import { ChatSetupModalComponent } from '../../../shared/components/chat-setup-modal/chat-setup-modal.component';
 import { Scenario } from '../../../core/models/scenario.model';
 import { Character } from '../../../core/models/character.model';
 import { Lorebook } from '../../../core/models/lorebook.model';
@@ -168,6 +169,7 @@ export class ScenarioListPage implements OnInit {
     private scenarioService: ScenarioService,
     private chatSessionService: ChatSessionService,
     private alertCtrl: AlertController,
+    private modalCtrl: ModalController,
   ) {
     addIcons({
       addOutline, createOutline, trashOutline, bookOutline, playOutline,
@@ -221,11 +223,26 @@ export class ScenarioListPage implements OnInit {
 
   async startChat(s: Scenario, event: Event): Promise<void> {
     event.stopPropagation();
+    
+    const modal = await this.modalCtrl.create({
+      component: ChatSetupModalComponent,
+      componentProps: { isEditMode: false }
+    });
+    
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+    
+    if (!data) return; // User cancelled
+
     const session = await this.chatSessionService.createSession({
       scenarioId: s.id,
       activeCharacterIds: s.characterIds || [],
       mode: s.defaultMode || 'chat',
       title: s.title || 'New Chat',
+      activeModel: data.model,
+      activePresetId: data.presetId,
+      activeSystemPrompt: data.systemPrompt,
+      activeSamplingOverrides: data.params
     });
     const routePrefix = s.defaultMode === 'story' ? '/story/' : '/chat/';
     this.router.navigateByUrl(routePrefix + session.id);

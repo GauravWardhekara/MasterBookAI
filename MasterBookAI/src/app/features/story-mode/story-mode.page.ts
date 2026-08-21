@@ -30,6 +30,7 @@ import { ConnectionProfile } from '../../core/models/connection-profile.model';
 import { generateId, now } from '../../core/models/base.model';
 import { FileIOService } from '../../core/services/file-io.service';
 import { MemoryService } from '../../core/services/memory.service';
+import { ChatSetupModalComponent } from '../../shared/components/chat-setup-modal/chat-setup-modal.component';
 
 @Component({
   selector: 'app-story-mode',
@@ -48,6 +49,9 @@ import { MemoryService } from '../../core/services/memory.service';
           </span>
         </ion-title>
         <ion-buttons slot="end">
+          <ion-button (click)="openChatSettings()">
+            <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
+          </ion-button>
           <ion-button (click)="showStoryMenu()">
             <ion-icon slot="icon-only" name="ellipsis-vertical-outline"></ion-icon>
           </ion-button>
@@ -825,12 +829,18 @@ export class StoryModePage implements OnInit {
         this.connectionProfile.promptTemplate
       );
 
+      const llmOptions = {
+        model: this.session.activeModel || this.activeModel,
+        temperature: this.session.activeSamplingOverrides?.temperature ?? this.connectionProfile.defaultSampling?.temperature ?? 0.8,
+        maxTokens: this.session.activeSamplingOverrides?.maxTokens ?? this.connectionProfile.defaultSampling?.maxTokens ?? 800,
+        topP: this.session.activeSamplingOverrides?.topP ?? this.connectionProfile.defaultSampling?.topP,
+        topK: this.session.activeSamplingOverrides?.topK ?? this.connectionProfile.defaultSampling?.topK,
+        repetitionPenalty: this.session.activeSamplingOverrides?.repetitionPenalty ?? this.connectionProfile.defaultSampling?.repetitionPenalty,
+        minP: this.session.activeSamplingOverrides?.minP ?? this.connectionProfile.defaultSampling?.minP,
+      };
+
       if (this.connectionProfile.streamingEnabled) {
-        for await (const chunk of this.llmProvider.stream(llmMessages, {
-          model: this.activeModel,
-          temperature: this.connectionProfile.defaultSampling?.temperature ?? 0.8,
-          maxTokens: this.connectionProfile.defaultSampling?.maxTokens ?? 800,
-        }, this.connectionProfile)) {
+        for await (const chunk of this.llmProvider.stream(llmMessages, llmOptions, this.connectionProfile)) {
           if (chunk.done) break;
           this.ngZone.run(() => {
             this.streamingContent += chunk.content;
@@ -838,11 +848,7 @@ export class StoryModePage implements OnInit {
           this.scrollToBottom();
         }
       } else {
-        this.streamingContent = await this.llmProvider.complete(llmMessages, {
-          model: this.activeModel,
-          temperature: this.connectionProfile.defaultSampling?.temperature ?? 0.8,
-          maxTokens: this.connectionProfile.defaultSampling?.maxTokens ?? 800,
-        }, this.connectionProfile);
+        this.streamingContent = await this.llmProvider.complete(llmMessages, llmOptions, this.connectionProfile);
       }
 
       if (this.streamingContent.trim()) {
@@ -959,6 +965,34 @@ export class StoryModePage implements OnInit {
       ],
     });
     await alert.present();
+  }
+
+  // ── Chat Settings ──
+
+  async openChatSettings(): Promise<void> {
+    if (!this.session) return;
+
+    const modal = await this.modalCtrl.create({
+      component: ChatSetupModalComponent,
+      componentProps: {
+        isEditMode: true,
+        initialModel: this.session.activeModel,
+        initialPresetId: this.session.activePresetId,
+        initialSystemPrompt: this.session.activeSystemPrompt,
+        initialParams: this.session.activeSamplingOverrides
+      }
+    });
+
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+
+    if (data) {
+      this.session.activeModel = data.model;
+      this.session.activePresetId = data.presetId;
+      this.session.activeSystemPrompt = data.systemPrompt;
+      this.session.activeSamplingOverrides = data.params;
+      await this.saveSession();
+    }
   }
 
   // ── Story Menu ──
@@ -1086,6 +1120,13 @@ export class StoryModePage implements OnInit {
    * not as story text to include verbatim.
    */
   private buildStorySystemPrompt(): string {
+    if (this.session?.activeSystemPrompt) {
+      let prompt = this.session.activeSystemPrompt;
+      prompt = prompt.replace(/\{\{user\}\}/gi, this.persona?.name || 'User');
+      prompt = prompt.replace(/\{\{char\}\}/gi, this.activeCharacters.map(c => c.name).join(' and '));
+      return prompt;
+    }
+
     const charDescriptions = this.activeCharacters
       .map(c => `${c.name}: ${c.description || ''} ${c.personality || ''}`.trim())
       .filter(d => d)

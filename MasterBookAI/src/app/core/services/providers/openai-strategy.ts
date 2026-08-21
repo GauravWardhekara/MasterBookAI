@@ -77,6 +77,7 @@ export class OpenAIStrategy extends BaseSSEStrategy {
       temperature: options.temperature ?? sampling.temperature ?? 0.7,
       max_tokens: options.maxTokens ?? sampling.maxTokens ?? 512,
       stream: options.stream ?? conn.streamingEnabled ?? true,
+      min_p: options.minP ?? sampling.minP,
     };
 
     if (options.topP ?? sampling.topP) body['top_p'] = options.topP ?? sampling.topP;

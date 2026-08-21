@@ -5,6 +5,7 @@ import { Lorebook, LoreEntry } from '../models/lorebook.model';
 import { Scenario } from '../models/scenario.model';
 import { ChatSession, Memory } from '../models/chat-session.model';
 import { ConnectionProfile, ImageGenConfig } from '../models/connection-profile.model';
+import { Preset } from '../models/preset.model';
 
 /**
  * MasterBookAI local database using Dexie.js (IndexedDB wrapper).
@@ -21,11 +22,12 @@ export class DatabaseService extends Dexie {
   memories!: Table<Memory, string>;
   connectionProfiles!: Table<ConnectionProfile, string>;
   imageGenConfigs!: Table<ImageGenConfig, string>;
+  presets!: Table<Preset, string>;
 
   constructor() {
     super('MasterBookAI');
 
-    this.version(1).stores({
+    this.version(2).stores({
       characters: 'id, name, *tags, createdAt, updatedAt',
       personas: 'id, name, isDefault',
       lorebooks: 'id, title, *tags, createdAt, updatedAt',
@@ -35,6 +37,7 @@ export class DatabaseService extends Dexie {
       memories: 'id, source, linkedChatSessionId, linkedScenarioId, importanceScore',
       connectionProfiles: 'id, name, type, isDefault',
       imageGenConfigs: 'id, providerType, isDefault',
+      presets: 'id, name, isAuthorPreset, createdAt',
     });
   }
 
