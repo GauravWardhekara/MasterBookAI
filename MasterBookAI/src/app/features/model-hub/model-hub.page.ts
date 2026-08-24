@@ -19,6 +19,7 @@ import { Router } from '@angular/router';
 import { ModelHubService } from '../../core/services/model-hub.service';
 import { DeviceCapabilityService } from '../../core/services/device-capability.service';
 import { HubModel, ModelFile, DeviceCapabilities, LocalModel } from '../../core/models/model-hub.model';
+import { Capacitor } from '@capacitor/core';
 
 @Component({
   selector: 'app-model-hub',
@@ -56,6 +57,14 @@ import { HubModel, ModelFile, DeviceCapabilities, LocalModel } from '../../core/
             }
           </span>
           <ion-badge [color]="getTierColor()" class="tier-badge">{{ deviceCaps.tier | uppercase }}</ion-badge>
+        </div>
+      }
+
+      <!-- Native Warning Banner -->
+      @if (isNativePlatform) {
+        <div class="native-warning-banner">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <span>Local desktop models (Ollama) cannot run natively on this device. Use Cloud or Web-LLM.</span>
         </div>
       }
     
@@ -311,6 +320,15 @@ import { HubModel, ModelFile, DeviceCapabilities, LocalModel } from '../../core/
     .device-info { flex: 1; }
     .tier-badge { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 20px; }
 
+    /* Native Warning Banner */
+    .native-warning-banner {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px; margin: 0 16px 8px;
+      background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px;
+      font-size: 12px; color: #fca5a5;
+    }
+    .native-warning-banner ion-icon { font-size: 20px; color: #ef4444; }
+
     /* Segment */
     .mh-segment {
       --background: transparent; margin: 4px 16px 8px; border-radius: 10px;
@@ -433,6 +451,7 @@ export class ModelHubPage implements OnInit {
   activeTab: string = 'local';
   searchQuery = '';
   isLoading = false;
+  isNativePlatform = false;
 
   // Device
   deviceCaps?: DeviceCapabilities;
@@ -467,6 +486,7 @@ export class ModelHubPage implements OnInit {
   }
 
   async ngOnInit() {
+    this.isNativePlatform = Capacitor.isNativePlatform();
     this.deviceCaps = await this.deviceCapService.detect();
     await this.loadTab();
   }

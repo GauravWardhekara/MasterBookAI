@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 import { DatabaseService } from './database.service';
 import { ConnectionProfile } from '../models/connection-profile.model';
 import { generateId, now } from '../models/base.model';
@@ -20,7 +21,23 @@ export class ConnectionService {
   }
 
   async getDefaultProfile(): Promise<ConnectionProfile | undefined> {
-    return this.db.connectionProfiles.where('isDefault').equals(1).first();
+    const isMobile = Capacitor.isNativePlatform();
+    
+    // First, check if there's an explicitly set default profile
+    let defaultProfile = await this.db.connectionProfiles.where('isDefault').equals(1).first();
+    
+    // If it's a mobile platform and the default is Ollama, try to fallback to a Cloud or Web-LLM provider
+    if (isMobile && defaultProfile?.provider === 'ollama') {
+      const fallback = await this.db.connectionProfiles
+        .filter(p => p.provider !== 'ollama')
+        .first();
+        
+      if (fallback) {
+        return fallback;
+      }
+    }
+    
+    return defaultProfile;
   }
 
   async createProfile(data: Partial<ConnectionProfile>): Promise<ConnectionProfile> {

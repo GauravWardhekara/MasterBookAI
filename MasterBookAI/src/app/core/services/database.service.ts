@@ -72,5 +72,57 @@ export class DatabaseService extends Dexie {
         updatedAt: new Date().toISOString(),
       });
     }
+
+    const connectionCount = await this.connectionProfiles.count();
+    if (connectionCount === 0) {
+      await this.connectionProfiles.add({
+        id: 'default-ollama',
+        name: 'Local Ollama (Bundled)',
+        type: 'local',
+        provider: 'ollama',
+        endpointUrl: 'http://127.0.0.1:11434',
+        authMethod: 'none',
+        modelList: [],
+        contextSize: 4096,
+        defaultSampling: {
+          temperature: 0.7,
+          topP: 0.9,
+          topK: 40,
+          repetitionPenalty: 1.1,
+          maxTokens: 512,
+        },
+        streamingEnabled: true,
+        promptTemplate: 'chatml',
+        isDefault: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    const webLlmCount = await this.connectionProfiles.where('provider').equals('web-llm').count();
+    if (webLlmCount === 0) {
+      await this.connectionProfiles.add({
+        id: 'default-web-llm',
+        name: 'Mobile-Native (Web-LLM)',
+        type: 'local',
+        provider: 'web-llm',
+        endpointUrl: 'local', // Run entirely on device
+        authMethod: 'none',
+        modelList: ['Llama-3-8B-Instruct-q4f32_1-MLC'], // Default small model
+        contextSize: 4096,
+        defaultSampling: {
+          temperature: 0.7,
+          topP: 0.9,
+          topK: 40,
+          repetitionPenalty: 1.1,
+          maxTokens: 512,
+        },
+        streamingEnabled: true,
+        promptTemplate: 'chatml',
+        isDefault: false, // We'll conditionally set it in connection.service
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
   }
 }
