@@ -18,8 +18,11 @@ import {
 import { Router } from '@angular/router';
 import { ModelHubService } from '../../core/services/model-hub.service';
 import { DeviceCapabilityService } from '../../core/services/device-capability.service';
+import { WebLlmService } from '../../core/services/web-llm.service';
+import { ConnectionService } from '../../core/services/connection.service';
 import { HubModel, ModelFile, DeviceCapabilities, LocalModel } from '../../core/models/model-hub.model';
 import { Capacitor } from '@capacitor/core';
+import { prebuiltAppConfig, ModelRecord, hasModelInCache } from '@mlc-ai/web-llm';
 
 @Component({
   selector: 'app-model-hub',
@@ -115,6 +118,63 @@ import { Capacitor } from '@capacitor/core';
     
         <!-- ═══ LOCAL TAB ═══ -->
         @if (activeTab === 'local' && !isLoading) {
+
+          <!-- WebGPU Initializer for Mobile -->
+          @if (isNativePlatform && deviceCaps?.hasWebGPU) {
+            <div class="pull-section">
+              <div class="pull-header">Mobile WebGPU Models</div>
+              <p style="color: #a1a1aa; font-size: 13px; margin-top: 0; margin-bottom: 12px;">Download a quantized model to run locally on your phone's GPU.</p>
+              
+              <div class="webgpu-model-list">
+                @for (wm of webGpuModels; track wm.model_id) {
+                  <div class="model-card" style="margin-bottom: 8px;">
+                      <div class="card-top">
+                        <div class="card-info">
+                          <div class="model-name" style="font-size: 14px;">{{ wm.model_id }}</div>
+                          <div class="model-meta">
+                            Requires ~{{ wm.vram_required_MB || 'Unknown ' }} MB vRAM
+                            @if (webGpuCacheStatus[wm.model_id]) {
+                              <span style="color: #4ade80; margin-left: 6px; font-weight: 600;">• Downloaded</span>
+                            }
+                          </div>
+                        </div>
+                        
+                        @if (activeWebGpuModelId === wm.model_id) {
+                          <ion-button 
+                            size="small" 
+                            fill="solid" 
+                            color="danger"
+                            (click)="stopWebGpu()">
+                            <ion-icon slot="start" name="stop-outline"></ion-icon>
+                            Stop
+                          </ion-button>
+                        } @else {
+                          <ion-button 
+                            size="small" 
+                            fill="outline" 
+                            color="primary"
+                            (click)="initWebGpu(wm.model_id)" 
+                            [disabled]="isWebGpuLoading">
+                            <ion-icon slot="start" [name]="webGpuCacheStatus[wm.model_id] ? 'play-outline' : 'cloud-download-outline'"></ion-icon>
+                            {{ webGpuCacheStatus[wm.model_id] ? 'Start' : 'Download' }}
+                          </ion-button>
+                        }
+                      </div>
+                    
+                    @if (isWebGpuLoading && currentWebGpuModelId === wm.model_id) {
+                      <div class="pull-progress" style="margin-top: 10px;">
+                        <div class="progress-bar">
+                          <div class="progress-fill animated" [style.width.%]="webGpuProgress"></div>
+                        </div>
+                        <span class="progress-text">{{ webGpuStatus }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
           @if (localModels.length === 0) {
             <div class="empty-state">
               <ion-icon name="hardware-chip-outline" class="empty-icon"></ion-icon>
@@ -468,10 +528,21 @@ export class ModelHubPage implements OnInit {
   pullProgress = 0;
   pullStatus = '';
 
+  // WebGPU state
+  isWebGpuLoading = false;
+  webGpuProgress = 0;
+  webGpuStatus = '';
+  currentWebGpuModelId = '';
+  activeWebGpuModelId = '';
+  webGpuModels: ModelRecord[] = [];
+  webGpuCacheStatus: Record<string, boolean> = {};
+
   constructor(
     private router: Router,
     private modelHub: ModelHubService,
     private deviceCapService: DeviceCapabilityService,
+    private webLlm: WebLlmService,
+    private connectionService: ConnectionService,
     private modalCtrl: ModalController,
     private alertCtrl: AlertController,
     private toastCtrl: ToastController
@@ -488,7 +559,31 @@ export class ModelHubPage implements OnInit {
   async ngOnInit() {
     this.isNativePlatform = Capacitor.isNativePlatform();
     this.deviceCaps = await this.deviceCapService.detect();
+    
+    // Subscribe to WebGPU load progress
+    this.webLlm.progress$.subscribe(report => {
+      this.webGpuProgress = Math.round(report.progress * 100);
+      this.webGpuStatus = report.text;
+    });
+
+    // Subscribe to active model
+    this.webLlm.activeModel$.subscribe(modelId => {
+      this.activeWebGpuModelId = modelId;
+    });
+
+    // Populate WebGPU models from prebuilt config
+    this.webGpuModels = prebuiltAppConfig.model_list;
+    await this.checkWebGpuCacheStatus();
+
     await this.loadTab();
+  }
+
+  async checkWebGpuCacheStatus() {
+    if (!this.isNativePlatform || !this.deviceCaps?.hasWebGPU) return;
+    
+    for (const model of this.webGpuModels) {
+      this.webGpuCacheStatus[model.model_id] = await hasModelInCache(model.model_id, prebuiltAppConfig);
+    }
   }
 
   goBack() {
@@ -599,6 +694,68 @@ export class ModelHubPage implements OnInit {
     this.isPulling = false;
   }
 
+  // ─── WebGPU Initialization ─────────────────────────────────────────────
+
+  async initWebGpu(modelId: string) {
+    if (this.isWebGpuLoading) return;
+    this.isWebGpuLoading = true;
+    this.currentWebGpuModelId = modelId;
+    this.webGpuProgress = 0;
+    this.webGpuStatus = 'Requesting Storage Permissions...';
+
+    const hasPerm = await this.modelHub.checkStoragePermissions();
+    if (!hasPerm) {
+      this.isWebGpuLoading = false;
+      this.currentWebGpuModelId = '';
+      const toast = await this.toastCtrl.create({
+        message: 'Storage permissions required to download models.',
+        duration: 3000, color: 'danger'
+      });
+      return await toast.present();
+    }
+
+    try {
+      this.webGpuStatus = 'Initializing WebGPU Engine...';
+      await this.webLlm.loadModel(modelId);
+      
+      // Auto-connect default profile
+      const defaultProfile = await this.connectionService.getProfile('default-web-llm');
+      if (defaultProfile) {
+        await this.connectionService.updateProfile('default-web-llm', {
+          modelList: [modelId],
+          isDefault: true
+        });
+      }
+      
+      const toast = await this.toastCtrl.create({
+        message: `WebGPU Engine started with ${modelId}! Ready for chat.`,
+        duration: 3000, color: 'success'
+      });
+      await toast.present();
+      
+      // Update cache status since it is now downloaded
+      await this.checkWebGpuCacheStatus();
+    } catch (err: any) {
+      this.webGpuStatus = `Error: ${err.message}`;
+      const toast = await this.toastCtrl.create({
+        message: `Failed to initialize WebGPU: ${err.message}`,
+        duration: 4000, color: 'danger'
+      });
+      await toast.present();
+    }
+    
+    this.isWebGpuLoading = false;
+  }
+
+  async stopWebGpu() {
+    await this.webLlm.unloadModel();
+    const toast = await this.toastCtrl.create({
+      message: 'WebGPU Engine stopped and GPU memory freed.',
+      duration: 2500, color: 'medium'
+    });
+    await toast.present();
+  }
+
   // ─── Delete ───────────────────────────────────────────────────────────
 
   async deleteOllamaModel(model: HubModel) {
@@ -692,6 +849,14 @@ export class ModelHubPage implements OnInit {
   }
 
   private async downloadHFFile(model: HubModel, file: ModelFile) {
+    if (this.isNativePlatform) {
+      const hasPerm = await this.modelHub.checkStoragePermissions();
+      if (!hasPerm) {
+        const t = await this.toastCtrl.create({ message: 'Storage permission denied.', duration: 2000, color: 'danger' });
+        return await t.present();
+      }
+    }
+
     const toast = await this.toastCtrl.create({
       message: `To download, use Ollama: ollama pull ${model.id}\nOr download the GGUF file directly from huggingface.co`,
       duration: 5000,

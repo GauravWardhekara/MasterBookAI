@@ -4,6 +4,8 @@ import { ConnectionService } from './connection.service';
 import { DeviceCapabilityService } from './device-capability.service';
 import { HubModel, ModelFile, LocalModel, DeviceTier } from '../models/model-hub.model';
 import { generateId, now } from '../models/base.model';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem } from '@capacitor/filesystem';
 
 /**
  * Service for the Model Hub feature.
@@ -19,6 +21,20 @@ export class ModelHubService {
     private connectionService: ConnectionService,
     private deviceCapability: DeviceCapabilityService
   ) {}
+
+  /**
+   * Request native storage permissions if on Android.
+   */
+  async checkStoragePermissions(): Promise<boolean> {
+    if (Capacitor.isNativePlatform()) {
+      let perm = await Filesystem.checkPermissions();
+      if (perm.publicStorage !== 'granted') {
+        perm = await Filesystem.requestPermissions();
+      }
+      return perm.publicStorage === 'granted';
+    }
+    return true;
+  }
 
   // ─── HuggingFace Integration ──────────────────────────────────────────
 

@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { MLCEngine, CreateMLCEngine, InitProgressCallback } from '@mlc-ai/web-llm';
-import { Subject } from 'rxjs';
+import { Subject, BehaviorSubject } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class WebLlmService {
   private engine: MLCEngine | null = null;
   public progress$ = new Subject<{text: string, progress: number}>();
+  
   private currentModelId = '';
+  public activeModel$ = new BehaviorSubject<string>('');
 
   constructor() {}
 
@@ -36,9 +38,11 @@ export class WebLlmService {
     try {
       this.engine = await CreateMLCEngine(modelId, { initProgressCallback });
       this.currentModelId = modelId;
+      this.activeModel$.next(modelId);
     } catch (err) {
       this.engine = null;
       this.currentModelId = '';
+      this.activeModel$.next('');
       throw err;
     }
   }
@@ -78,6 +82,7 @@ export class WebLlmService {
       }
       this.engine = null;
       this.currentModelId = '';
+      this.activeModel$.next('');
     }
   }
 }
