@@ -17,7 +17,7 @@ import { ScenarioService } from '../../../core/services/scenario.service';
 import { CharacterService } from '../../../core/services/character.service';
 import { LorebookService } from '../../../core/services/lorebook.service';
 import { ChatSessionService } from '../../../core/services/chat-session.service';
-import { ChatSetupModalComponent } from '../../../shared/components/chat-setup-modal/chat-setup-modal.component';
+import { ConnectionService } from '../../../core/services/connection.service';
 import { Scenario, createDefaultScenario } from '../../../core/models/scenario.model';
 import { Character } from '../../../core/models/character.model';
 import { Lorebook } from '../../../core/models/lorebook.model';
@@ -385,6 +385,7 @@ export class ScenarioEditorPage implements OnInit {
     private characterService: CharacterService,
     private lorebookService: LorebookService,
     private chatSessionService: ChatSessionService,
+    private connectionService: ConnectionService,
     private toastCtrl: ToastController,
     private alertCtrl: AlertController,
     private modalCtrl: ModalController,
@@ -561,27 +562,59 @@ export class ScenarioEditorPage implements OnInit {
       await this.scenarioService.updateScenario(this.scenarioId, this.scenario);
     }
 
-    const modal = await this.modalCtrl.create({
-      component: ChatSetupModalComponent,
-      componentProps: { isEditMode: false }
+    // Fetch all available models across profiles
+    const profiles = await this.connectionService.getAllProfiles();
+    let allModels: string[] = [];
+    profiles.forEach(p => {
+      if (p.modelList) allModels = allModels.concat(p.modelList);
     });
+    // Remove duplicates
+    allModels = [...new Set(allModels)];
     
-    await modal.present();
-    const { data } = await modal.onWillDismiss();
-    
-    if (!data) return; // User cancelled
+    if (allModels.length === 0) {
+      const alert = await this.alertCtrl.create({
+        header: 'No Models Found',
+        message: 'Please download a WebGPU model or configure a connection in settings first.',
+        buttons: ['OK']
+      });
+      await alert.present();
+      return;
+    }
 
-    const session = await this.chatSessionService.createSession({
-      scenarioId: this.scenario.id,
-      activeCharacterIds: this.scenario.characterIds || [],
-      mode: this.scenario.defaultMode || 'chat',
-      title: this.scenario.title || 'New Chat',
-      activeModel: data.model,
-      activePresetId: data.presetId,
-      activeSystemPrompt: data.systemPrompt,
-      activeSamplingOverrides: data.params
+    const defaultProfile = await this.connectionService.getDefaultProfile();
+    const defaultModel = defaultProfile?.modelList?.[0] || allModels[0];
+
+    const alert = await this.alertCtrl.create({
+      header: 'Select Model',
+      inputs: allModels.map(m => ({
+        name: 'model',
+        type: 'radio',
+        label: m,
+        value: m,
+        checked: m === defaultModel
+      })),
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        { 
+          text: 'Start',
+          handler: async (selectedModel) => {
+            if (!selectedModel) return false;
+            
+            const session = await this.chatSessionService.createSession({
+              scenarioId: this.scenario.id!,
+              activeCharacterIds: this.scenario.characterIds || [],
+              mode: this.scenario.defaultMode || 'chat',
+              title: this.scenario.title || 'New Chat',
+              activeModel: selectedModel
+            });
+            const routePrefix = this.scenario.defaultMode === 'story' ? '/story/' : '/chat/';
+            this.router.navigateByUrl(routePrefix + session.id);
+            return true;
+          }
+        }
+      ]
     });
-    const routePrefix = this.scenario.defaultMode === 'story' ? '/story/' : '/chat/';
-    this.router.navigateByUrl(routePrefix + session.id);
+    
+    await alert.present();
   }
 }

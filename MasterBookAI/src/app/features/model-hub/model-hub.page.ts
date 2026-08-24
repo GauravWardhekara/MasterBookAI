@@ -125,8 +125,17 @@ import { prebuiltAppConfig, ModelRecord, hasModelInCache } from '@mlc-ai/web-llm
               <div class="pull-header">Mobile WebGPU Models</div>
               <p style="color: #a1a1aa; font-size: 13px; margin-top: 0; margin-bottom: 12px;">Download a quantized model to run locally on your phone's GPU.</p>
               
+              <div style="margin-bottom: 16px;">
+                <ion-searchbar 
+                  [(ngModel)]="webGpuSearchQuery" 
+                  placeholder="Search WebGPU models..."
+                  class="mh-searchbar"
+                  debounce="200">
+                </ion-searchbar>
+              </div>
+
               <div class="webgpu-model-list">
-                @for (wm of webGpuModels; track wm.model_id) {
+                @for (wm of filteredWebGpuModels; track wm.model_id) {
                   <div class="model-card" style="margin-bottom: 8px;">
                       <div class="card-top">
                         <div class="card-info">
@@ -536,6 +545,31 @@ export class ModelHubPage implements OnInit {
   activeWebGpuModelId = '';
   webGpuModels: ModelRecord[] = [];
   webGpuCacheStatus: Record<string, boolean> = {};
+  webGpuSearchQuery = '';
+
+  get filteredWebGpuModels(): ModelRecord[] {
+    const query = this.webGpuSearchQuery.toLowerCase().trim();
+    
+    // First, filter based on search query
+    let filtered = this.webGpuModels;
+    if (query) {
+      filtered = filtered.filter(m => m.model_id.toLowerCase().includes(query));
+    }
+
+    // Second, sort: downloaded models at the top
+    return filtered.sort((a, b) => {
+      const aDownloaded = this.webGpuCacheStatus[a.model_id] ? 1 : 0;
+      const bDownloaded = this.webGpuCacheStatus[b.model_id] ? 1 : 0;
+      
+      // Sort descending by downloaded status (1 goes before 0)
+      if (aDownloaded !== bDownloaded) {
+        return bDownloaded - aDownloaded;
+      }
+      
+      // Secondary sort: alphabetical
+      return a.model_id.localeCompare(b.model_id);
+    });
+  }
 
   constructor(
     private router: Router,

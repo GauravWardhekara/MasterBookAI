@@ -29,6 +29,7 @@ import { Lorebook } from '../../core/models/lorebook.model';
 import { ConnectionProfile } from '../../core/models/connection-profile.model';
 import { generateId, now } from '../../core/models/base.model';
 import { MemoryService } from '../../core/services/memory.service';
+import { ChatSetupModalComponent } from '../../shared/components/chat-setup-modal/chat-setup-modal.component';
 
 @Component({
   selector: 'app-chat',
@@ -42,6 +43,9 @@ import { MemoryService } from '../../core/services/memory.service';
         </ion-buttons>
         <ion-title>{{ session?.title || 'Chat' }}</ion-title>
         <ion-buttons slot="end">
+          <ion-button (click)="openChatSettings()">
+            <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
+          </ion-button>
           <ion-button (click)="showChatMenu()">
             <ion-icon slot="icon-only" name="ellipsis-vertical-outline"></ion-icon>
           </ion-button>
@@ -740,6 +744,34 @@ export class ChatPage implements OnInit {
       ],
     });
     await actionSheet.present();
+  }
+
+  async openChatSettings(): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: ChatSetupModalComponent,
+      componentProps: { 
+        isEditMode: true,
+        session: this.session
+      }
+    });
+    
+    await modal.present();
+    const { data } = await modal.onWillDismiss();
+    
+    if (data && this.session) {
+      this.session.activeModel = data.model;
+      this.session.activePresetId = data.presetId;
+      this.session.activeSystemPrompt = data.systemPrompt;
+      this.session.activeSamplingOverrides = data.params;
+      this.activeModel = data.model;
+      await this.saveSession();
+      
+      const toast = await this.toastCtrl.create({
+        message: 'Chat settings updated.',
+        duration: 2000, color: 'success'
+      });
+      await toast.present();
+    }
   }
 
   async renameChat(): Promise<void> {

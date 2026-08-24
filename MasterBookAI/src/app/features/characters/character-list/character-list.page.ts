@@ -58,8 +58,7 @@ import { CharacterImportModalComponent } from '../../../shared/components/charac
           @for (char of characters; track char; let i = $index) {
             <div
               class="character-card mb-card mb-fade-in"
-              [style.animation-delay]="(i * 0.05) + 's'"
-              (click)="navigateTo('/characters/' + char.id + '/edit')">
+              [style.animation-delay]="(i * 0.05) + 's'">
               <div class="char-avatar-wrap">
                 @if (char.avatar) {
                   <div class="char-avatar">
@@ -203,6 +202,10 @@ export class CharacterListPage implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    await this.loadCharacters();
+  }
+
+  async ionViewWillEnter(): Promise<void> {
     await this.loadCharacters();
   }
 
