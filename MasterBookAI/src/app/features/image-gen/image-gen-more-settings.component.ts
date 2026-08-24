@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton, IonIcon,
@@ -13,10 +13,16 @@ import { ImageGenSessionConfig } from '../../core/models/image-gen-config.model'
   selector: 'app-image-gen-more-settings',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton, IonIcon,
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonButtons,
+    IonButton,
+    IonIcon,
     IonRange
-  ],
+],
   template: `
     <ion-header class="ion-no-border ig-ms-header">
       <ion-toolbar class="transparent-toolbar">

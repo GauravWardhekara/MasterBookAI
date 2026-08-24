@@ -37,25 +37,29 @@ import { CharacterPickerModalComponent } from '../../../shared/components/charac
         </ion-button>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="ion-padding">
       <div class="editor-form mb-fade-in">
         <!-- Cover Image -->
         <div class="cover-section" (click)="triggerCoverUpload()">
-          <div *ngIf="scenario.coverImage" class="cover-preview">
-            <img [src]="scenario.coverImage" alt="Cover" />
-            <div class="cover-overlay">
-              <ion-icon name="image-outline"></ion-icon>
-              <span>Change Cover</span>
+          @if (scenario.coverImage) {
+            <div class="cover-preview">
+              <img [src]="scenario.coverImage" alt="Cover" />
+              <div class="cover-overlay">
+                <ion-icon name="image-outline"></ion-icon>
+                <span>Change Cover</span>
+              </div>
             </div>
-          </div>
-          <div *ngIf="!scenario.coverImage" class="cover-placeholder">
-            <ion-icon name="image-outline"></ion-icon>
-            <span>Upload Cover Image</span>
-          </div>
+          }
+          @if (!scenario.coverImage) {
+            <div class="cover-placeholder">
+              <ion-icon name="image-outline"></ion-icon>
+              <span>Upload Cover Image</span>
+            </div>
+          }
           <input type="file" #coverInput accept="image/*" (change)="onCoverSelected($event)" style="display:none" />
         </div>
-
+    
         <!-- Basic Info -->
         <div class="form-section">
           <div class="form-field">
@@ -67,7 +71,7 @@ import { CharacterPickerModalComponent } from '../../../shared/components/charac
             <ion-textarea [(ngModel)]="scenario.description" placeholder="Describe the scenario..." rows="3" class="mb-input"></ion-textarea>
           </div>
         </div>
-
+    
         <!-- Characters Section -->
         <div class="form-section">
           <div class="mb-section-header">
@@ -85,38 +89,46 @@ import { CharacterPickerModalComponent } from '../../../shared/components/charac
               </ion-button>
             </div>
           </div>
-
-          <div *ngIf="selectedCharacters.length === 0" class="empty-inline">
-            No characters added yet
-          </div>
-
-          <div class="character-chips">
-            <div *ngFor="let char of selectedCharacters" class="char-chip mb-card">
-              <div class="char-chip-avatar">
-                <div *ngIf="char.avatar" class="mini-avatar">
-                  <img [src]="char.avatar" alt="" />
-                </div>
-                <div *ngIf="!char.avatar" class="mini-avatar mb-avatar-placeholder">
-                  {{ char.name.charAt(0) }}
-                </div>
-              </div>
-              <div class="char-chip-info">
-                <span class="char-chip-name">{{ char.name }}</span>
-                <span class="char-chip-role mb-badge"
-                      [class.mb-badge-premise]="scenario.characterRoles![char.id] === 'playable'"
-                      [class.mb-badge-memory]="scenario.characterRoles![char.id] === 'npc'"
-                      (click)="toggleRole(char.id)">
-                  {{ scenario.characterRoles![char.id] | titlecase }}
-                  <ion-icon name="swap-horizontal-outline" style="font-size: 10px; margin-left: 3px;"></ion-icon>
-                </span>
-              </div>
-              <ion-button fill="clear" size="small" color="danger" (click)="removeCharacter(char.id)">
-                <ion-icon slot="icon-only" name="close-outline"></ion-icon>
-              </ion-button>
+    
+          @if (selectedCharacters.length === 0) {
+            <div class="empty-inline">
+              No characters added yet
             </div>
+          }
+    
+          <div class="character-chips">
+            @for (char of selectedCharacters; track char) {
+              <div class="char-chip mb-card">
+                <div class="char-chip-avatar">
+                  @if (char.avatar) {
+                    <div class="mini-avatar">
+                      <img [src]="char.avatar" alt="" />
+                    </div>
+                  }
+                  @if (!char.avatar) {
+                    <div class="mini-avatar mb-avatar-placeholder">
+                      {{ char.name.charAt(0) }}
+                    </div>
+                  }
+                </div>
+                <div class="char-chip-info">
+                  <span class="char-chip-name">{{ char.name }}</span>
+                  <span class="char-chip-role mb-badge"
+                    [class.mb-badge-premise]="scenario.characterRoles![char.id] === 'playable'"
+                    [class.mb-badge-memory]="scenario.characterRoles![char.id] === 'npc'"
+                    (click)="toggleRole(char.id)">
+                    {{ scenario.characterRoles![char.id] | titlecase }}
+                    <ion-icon name="swap-horizontal-outline" style="font-size: 10px; margin-left: 3px;"></ion-icon>
+                  </span>
+                </div>
+                <ion-button fill="clear" size="small" color="danger" (click)="removeCharacter(char.id)">
+                  <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+                </ion-button>
+              </div>
+            }
           </div>
         </div>
-
+    
         <!-- Lorebooks Section -->
         <div class="form-section">
           <div class="mb-section-header">
@@ -134,72 +146,76 @@ import { CharacterPickerModalComponent } from '../../../shared/components/charac
               </ion-button>
             </div>
           </div>
-
-          <div *ngIf="selectedLorebooks.length === 0" class="empty-inline">
-            No lorebooks linked yet
-          </div>
-
-          <div class="lorebook-chips">
-            <div *ngFor="let lb of selectedLorebooks; let i = index" class="lb-chip mb-card">
-              <span class="lb-chip-icon">📖</span>
-              <div class="lb-chip-info">
-                <span class="lb-chip-name">{{ lb.title }}</span>
-                <span class="lb-chip-meta">{{ lb.entries.length || 0 }} entries · Priority {{ i + 1 }}</span>
-              </div>
-              <ion-button fill="clear" size="small" (click)="editLorebook(lb)">
-                <ion-icon slot="icon-only" name="create-outline"></ion-icon>
-              </ion-button>
-              <ion-button fill="clear" size="small" color="danger" (click)="removeLorebook(lb.id)">
-                <ion-icon slot="icon-only" name="close-outline"></ion-icon>
-              </ion-button>
+    
+          @if (selectedLorebooks.length === 0) {
+            <div class="empty-inline">
+              No lorebooks linked yet
             </div>
+          }
+    
+          <div class="lorebook-chips">
+            @for (lb of selectedLorebooks; track lb; let i = $index) {
+              <div class="lb-chip mb-card">
+                <span class="lb-chip-icon">📖</span>
+                <div class="lb-chip-info">
+                  <span class="lb-chip-name">{{ lb.title }}</span>
+                  <span class="lb-chip-meta">{{ lb.entries.length || 0 }} entries · Priority {{ i + 1 }}</span>
+                </div>
+                <ion-button fill="clear" size="small" (click)="editLorebook(lb)">
+                  <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                </ion-button>
+                <ion-button fill="clear" size="small" color="danger" (click)="removeLorebook(lb.id)">
+                  <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+                </ion-button>
+              </div>
+            }
           </div>
         </div>
-
+    
         <!-- Configuration -->
         <div class="form-section">
           <div class="mb-section-header">
             <span class="mb-section-title">Configuration</span>
           </div>
-
+    
           <div class="config-grid">
             <div class="form-field">
               <label>Mode</label>
               <div class="toggle-group">
                 <span class="mb-chip" [class.active]="scenario.defaultMode === 'chat'"
-                      (click)="scenario.defaultMode = 'chat'">Chat</span>
+                (click)="scenario.defaultMode = 'chat'">Chat</span>
                 <span class="mb-chip" [class.active]="scenario.defaultMode === 'story'"
-                      (click)="scenario.defaultMode = 'story'">Story</span>
+                (click)="scenario.defaultMode = 'story'">Story</span>
               </div>
             </div>
-
+    
             <div class="form-field">
               <label>POV</label>
               <div class="toggle-group">
                 <span class="mb-chip" [class.active]="scenario.defaultPOV === '1st-person'"
-                      (click)="scenario.defaultPOV = '1st-person'">1st Person</span>
+                (click)="scenario.defaultPOV = '1st-person'">1st Person</span>
                 <span class="mb-chip" [class.active]="scenario.defaultPOV === '3rd-person'"
-                      (click)="scenario.defaultPOV = '3rd-person'">3rd Person</span>
+                (click)="scenario.defaultPOV = '3rd-person'">3rd Person</span>
               </div>
             </div>
-
+    
             <div class="form-field">
               <label>Tense</label>
               <div class="toggle-group">
                 <span class="mb-chip" [class.active]="scenario.defaultTense === 'present'"
-                      (click)="scenario.defaultTense = 'present'">Present</span>
+                (click)="scenario.defaultTense = 'present'">Present</span>
                 <span class="mb-chip" [class.active]="scenario.defaultTense === 'past'"
-                      (click)="scenario.defaultTense = 'past'">Past</span>
+                (click)="scenario.defaultTense = 'past'">Past</span>
               </div>
             </div>
           </div>
-
+    
           <div class="form-field">
             <label>Special Instructions (System Prompt)</label>
             <ion-textarea [(ngModel)]="scenario.specialInstructions" placeholder="Instructions for the AI..." rows="4" class="mb-input"></ion-textarea>
           </div>
         </div>
-
+    
         <!-- Tags -->
         <div class="form-section">
           <div class="mb-section-header">
@@ -212,26 +228,30 @@ import { CharacterPickerModalComponent } from '../../../shared/components/charac
             </ion-button>
           </div>
           <div class="tags-list">
-            <ion-chip *ngFor="let tag of scenario.tags" (click)="removeTag(tag)">
-              {{ tag }} <ion-icon name="close-outline"></ion-icon>
-            </ion-chip>
+            @for (tag of scenario.tags; track tag) {
+              <ion-chip (click)="removeTag(tag)">
+                {{ tag }} <ion-icon name="close-outline"></ion-icon>
+              </ion-chip>
+            }
           </div>
         </div>
-
+    
         <!-- Save -->
         <ion-button expand="block" class="mb-btn-primary save-btn" (click)="save()">
           <ion-icon slot="start" name="save-outline"></ion-icon>
           {{ isEditing ? 'Update Scenario' : 'Create Scenario' }}
         </ion-button>
-
+    
         <!-- Start Chat (only for existing scenarios) -->
-        <ion-button *ngIf="isEditing" expand="block" class="start-chat-btn" (click)="startChat()">
-          <ion-icon slot="start" name="play-outline"></ion-icon>
-          Start Chat
-        </ion-button>
+        @if (isEditing) {
+          <ion-button expand="block" class="start-chat-btn" (click)="startChat()">
+            <ion-icon slot="start" name="play-outline"></ion-icon>
+            Start Chat
+          </ion-button>
+        }
       </div>
     </ion-content>
-  `,
+    `,
   styles: [`
     .editor-form { max-width: 600px; margin: 0 auto; }
 

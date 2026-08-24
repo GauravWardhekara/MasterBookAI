@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton, IonIcon,
@@ -18,9 +18,15 @@ export interface SystemPromptItem {
   selector: 'app-system-prompt-modal',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton, IonIcon
-  ],
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonButtons,
+    IonButton,
+    IonIcon
+],
   template: `
     <ion-header class="ion-no-border sp-header">
       <ion-toolbar class="transparent-toolbar">
@@ -32,31 +38,33 @@ export interface SystemPromptItem {
         <ion-title class="sp-title">System Prompt</ion-title>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="sp-content ion-padding">
       <div class="sp-container">
-        
+    
         <div class="prompt-list">
-          <div *ngFor="let prompt of prompts" 
-               class="prompt-card" 
-               [class.active]="selectedPromptId === prompt.id"
-               (click)="selectPrompt(prompt)">
-            
-            <div class="prompt-main">
-              <div class="prompt-name">{{ prompt.name }}</div>
-              <div class="prompt-text">{{ prompt.content }}</div>
+          @for (prompt of prompts; track prompt) {
+            <div
+              class="prompt-card"
+              [class.active]="selectedPromptId === prompt.id"
+              (click)="selectPrompt(prompt)">
+              <div class="prompt-main">
+                <div class="prompt-name">{{ prompt.name }}</div>
+                <div class="prompt-text">{{ prompt.content }}</div>
+              </div>
+              <div class="prompt-actions">
+                @if (selectedPromptId === prompt.id) {
+                  <ion-icon name="checkmark-outline" class="check-icon"></ion-icon>
+                }
+                <ion-icon name="chevron-forward-outline" class="arrow-icon"></ion-icon>
+              </div>
             </div>
-            
-            <div class="prompt-actions">
-              <ion-icon name="checkmark-outline" class="check-icon" *ngIf="selectedPromptId === prompt.id"></ion-icon>
-              <ion-icon name="chevron-forward-outline" class="arrow-icon"></ion-icon>
-            </div>
-          </div>
+          }
         </div>
-
+    
       </div>
     </ion-content>
-  `,
+    `,
   styles: [`
     .sp-header { background: #1c1c1e; }
     .transparent-toolbar { --background: transparent; color: white; }

@@ -31,139 +31,147 @@ import { SamplingOverrides } from '../../../core/models/character.model';
           </ion-button>
         </ion-buttons>
         <ion-title>{{ view === 'list' ? 'Presets' : 'Preset' }}</ion-title>
-        <ion-buttons slot="end" *ngIf="view === 'list'">
-          <ion-button (click)="createPreset()">
-            <ion-icon slot="icon-only" name="add-outline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
+        @if (view === 'list') {
+          <ion-buttons slot="end">
+            <ion-button (click)="createPreset()">
+              <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        }
       </ion-toolbar>
-      <ion-toolbar *ngIf="view === 'list'">
-        <ion-segment [(ngModel)]="activeTab">
-          <ion-segment-button value="authors">
-            <ion-label>Author's</ion-label>
-          </ion-segment-button>
-          <ion-segment-button value="mine">
-            <ion-label>Mine</ion-label>
-          </ion-segment-button>
-        </ion-segment>
-      </ion-toolbar>
+      @if (view === 'list') {
+        <ion-toolbar>
+          <ion-segment [(ngModel)]="activeTab">
+            <ion-segment-button value="authors">
+              <ion-label>Author's</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="mine">
+              <ion-label>Mine</ion-label>
+            </ion-segment-button>
+          </ion-segment>
+        </ion-toolbar>
+      }
     </ion-header>
-
+    
     <ion-content class="ion-padding preset-content">
-      
+    
       <!-- List View -->
-      <div *ngIf="view === 'list'">
-        <ion-item class="mb-item" lines="none">
-          <ion-label>Use in Chat</ion-label>
-          <ion-toggle slot="end" [(ngModel)]="useInChat"></ion-toggle>
-        </ion-item>
-
-        <div class="empty-state" *ngIf="displayedPresets.length === 0">
-          No presets found
-        </div>
-
-        <ion-list class="mb-list" *ngIf="displayedPresets.length > 0">
-          <ion-item *ngFor="let p of displayedPresets" (click)="editPreset(p)" button class="mb-item">
-            <ion-label>
-              <h2>{{ p.name }}</h2>
-              <p>{{ p.description || 'No description' }}</p>
-            </ion-label>
+      @if (view === 'list') {
+        <div>
+          <ion-item class="mb-item" lines="none">
+            <ion-label>Use in Chat</ion-label>
+            <ion-toggle slot="end" [(ngModel)]="useInChat"></ion-toggle>
           </ion-item>
-        </ion-list>
-      </div>
-
+          @if (displayedPresets.length === 0) {
+            <div class="empty-state">
+              No presets found
+            </div>
+          }
+          @if (displayedPresets.length > 0) {
+            <ion-list class="mb-list">
+              @for (p of displayedPresets; track p) {
+                <ion-item (click)="editPreset(p)" button class="mb-item">
+                  <ion-label>
+                    <h2>{{ p.name }}</h2>
+                    <p>{{ p.description || 'No description' }}</p>
+                  </ion-label>
+                </ion-item>
+              }
+            </ion-list>
+          }
+        </div>
+      }
+    
       <!-- Detail View -->
-      <div *ngIf="view === 'detail' && activePreset">
-        <ion-item class="mb-item">
-          <ion-label position="stacked">Name</ion-label>
-          <ion-input [(ngModel)]="activePreset.name" placeholder="Name"></ion-input>
-        </ion-item>
-
-        <ion-item class="mb-item">
-          <ion-label position="stacked">Description</ion-label>
-          <ion-textarea [(ngModel)]="activePreset.description" rows="3"></ion-textarea>
-        </ion-item>
-
-        <ion-item class="mb-item">
-          <ion-label position="stacked">Model</ion-label>
-          <ion-select [(ngModel)]="activePreset.model" interface="action-sheet">
-            <ion-select-option *ngFor="let m of availableModels" [value]="m">{{ m }}</ion-select-option>
-          </ion-select>
-        </ion-item>
-
-        <ion-item class="mb-item system-prompt-item">
-          <ion-label position="stacked">System Prompt</ion-label>
-          <ion-select [(ngModel)]="activePreset.systemPrompt" interface="action-sheet">
-            <ion-select-option *ngFor="let sp of systemPrompts" [value]="sp.content">{{ sp.name }}</ion-select-option>
-          </ion-select>
-          <ion-textarea
-            [(ngModel)]="activePreset.systemPrompt"
-            rows="6"
-            class="system-prompt-textarea">
-          </ion-textarea>
-        </ion-item>
-
-        <!-- Parameters -->
-        <div class="param-slider">
-          <div class="param-header">
-            <span>Max New Tokens (1 - 4000)</span>
-            <span>{{ activePreset.parameters.maxTokens }}</span>
+      @if (view === 'detail' && activePreset) {
+        <div>
+          <ion-item class="mb-item">
+            <ion-label position="stacked">Name</ion-label>
+            <ion-input [(ngModel)]="activePreset.name" placeholder="Name"></ion-input>
+          </ion-item>
+          <ion-item class="mb-item">
+            <ion-label position="stacked">Description</ion-label>
+            <ion-textarea [(ngModel)]="activePreset.description" rows="3"></ion-textarea>
+          </ion-item>
+          <ion-item class="mb-item">
+            <ion-label position="stacked">Model</ion-label>
+            <ion-select [(ngModel)]="activePreset.model" interface="action-sheet">
+              @for (m of availableModels; track m) {
+                <ion-select-option [value]="m">{{ m }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+          <ion-item class="mb-item system-prompt-item">
+            <ion-label position="stacked">System Prompt</ion-label>
+            <ion-select [(ngModel)]="activePreset.systemPrompt" interface="action-sheet">
+              @for (sp of systemPrompts; track sp) {
+                <ion-select-option [value]="sp.content">{{ sp.name }}</ion-select-option>
+              }
+            </ion-select>
+            <ion-textarea
+              [(ngModel)]="activePreset.systemPrompt"
+              rows="6"
+              class="system-prompt-textarea">
+            </ion-textarea>
+          </ion-item>
+          <!-- Parameters -->
+          <div class="param-slider">
+            <div class="param-header">
+              <span>Max New Tokens (1 - 4000)</span>
+              <span>{{ activePreset.parameters.maxTokens }}</span>
+            </div>
+            <ion-range [min]="1" [max]="4000" [step]="1" [(ngModel)]="activePreset.parameters.maxTokens" color="warning"></ion-range>
           </div>
-          <ion-range [min]="1" [max]="4000" [step]="1" [(ngModel)]="activePreset.parameters.maxTokens" color="warning"></ion-range>
-        </div>
-
-        <div class="param-slider">
-          <div class="param-header">
-            <span>Temperature (0 - 2)</span>
-            <span>{{ activePreset.parameters.temperature | number:'1.2-2' }}</span>
+          <div class="param-slider">
+            <div class="param-header">
+              <span>Temperature (0 - 2)</span>
+              <span>{{ activePreset.parameters.temperature | number:'1.2-2' }}</span>
+            </div>
+            <ion-range [min]="0" [max]="2" [step]="0.01" [(ngModel)]="activePreset.parameters.temperature" color="warning"></ion-range>
           </div>
-          <ion-range [min]="0" [max]="2" [step]="0.01" [(ngModel)]="activePreset.parameters.temperature" color="warning"></ion-range>
-        </div>
-
-        <div class="param-slider">
-          <div class="param-header">
-            <span>Top P (0 - 1)</span>
-            <span>{{ activePreset.parameters.topP | number:'1.2-2' }}</span>
+          <div class="param-slider">
+            <div class="param-header">
+              <span>Top P (0 - 1)</span>
+              <span>{{ activePreset.parameters.topP | number:'1.2-2' }}</span>
+            </div>
+            <ion-range [min]="0" [max]="1" [step]="0.01" [(ngModel)]="activePreset.parameters.topP" color="warning"></ion-range>
           </div>
-          <ion-range [min]="0" [max]="1" [step]="0.01" [(ngModel)]="activePreset.parameters.topP" color="warning"></ion-range>
-        </div>
-
-        <div class="param-slider">
-          <div class="param-header">
-            <span>Top K (0 - 100)</span>
-            <span>{{ activePreset.parameters.topK }}</span>
+          <div class="param-slider">
+            <div class="param-header">
+              <span>Top K (0 - 100)</span>
+              <span>{{ activePreset.parameters.topK }}</span>
+            </div>
+            <ion-range [min]="0" [max]="100" [step]="1" [(ngModel)]="activePreset.parameters.topK" color="warning"></ion-range>
           </div>
-          <ion-range [min]="0" [max]="100" [step]="1" [(ngModel)]="activePreset.parameters.topK" color="warning"></ion-range>
-        </div>
-
-        <div class="param-slider">
-          <div class="param-header">
-            <span>Repetition Penalty (1 - 2)</span>
-            <span>{{ activePreset.parameters.repetitionPenalty | number:'1.2-2' }}</span>
+          <div class="param-slider">
+            <div class="param-header">
+              <span>Repetition Penalty (1 - 2)</span>
+              <span>{{ activePreset.parameters.repetitionPenalty | number:'1.2-2' }}</span>
+            </div>
+            <ion-range [min]="1" [max]="2" [step]="0.01" [(ngModel)]="activePreset.parameters.repetitionPenalty" color="warning"></ion-range>
           </div>
-          <ion-range [min]="1" [max]="2" [step]="0.01" [(ngModel)]="activePreset.parameters.repetitionPenalty" color="warning"></ion-range>
-        </div>
-
-        <div class="param-slider">
-          <div class="param-header">
-            <span>Min P (0 - 1)</span>
-            <span>{{ activePreset.parameters.minP | number:'1.2-2' }}</span>
+          <div class="param-slider">
+            <div class="param-header">
+              <span>Min P (0 - 1)</span>
+              <span>{{ activePreset.parameters.minP | number:'1.2-2' }}</span>
+            </div>
+            <ion-range [min]="0" [max]="1" [step]="0.01" [(ngModel)]="activePreset.parameters.minP" color="warning"></ion-range>
           </div>
-          <ion-range [min]="0" [max]="1" [step]="0.01" [(ngModel)]="activePreset.parameters.minP" color="warning"></ion-range>
+          <div class="action-footer">
+            <ion-button expand="block" class="mb-btn-primary" (click)="savePreset()">
+              Save
+            </ion-button>
+            @if (activePreset.id) {
+              <ion-button expand="block" color="danger" fill="clear" (click)="deletePreset()">
+                Delete
+              </ion-button>
+            }
+          </div>
         </div>
-
-        <div class="action-footer">
-          <ion-button expand="block" class="mb-btn-primary" (click)="savePreset()">
-            Save
-          </ion-button>
-          <ion-button expand="block" color="danger" fill="clear" (click)="deletePreset()" *ngIf="activePreset.id">
-            Delete
-          </ion-button>
-        </div>
-      </div>
-
+      }
+    
     </ion-content>
-  `,
+    `,
   styles: [`
     .preset-content { --background: var(--mb-bg-deep); }
     .mb-item {

@@ -37,64 +37,76 @@ import { Lorebook } from '../../../core/models/lorebook.model';
         ></ion-searchbar>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="ion-padding">
-      <div *ngIf="lorebooks.length === 0" class="mb-empty-state">
-        <ion-icon name="library-outline"></ion-icon>
-        <h3>No Lorebooks Yet</h3>
-        <p>Create lorebooks to add world-building lore, factions, locations, and more to your scenarios</p>
-        <ion-button class="mb-btn-primary" (click)="navigateTo('/lorebooks/new')">
-          <ion-icon slot="start" name="add-outline"></ion-icon>
-          Create Lorebook
-        </ion-button>
-      </div>
-
-      <div class="lorebook-list" *ngIf="lorebooks.length > 0">
-        <div *ngFor="let lb of lorebooks; let i = index"
-             class="lorebook-card mb-glass-card mb-fade-in"
-             [style.animation-delay]="(i * 0.05) + 's'">
-          <div class="lb-header" (click)="navigateTo('/lorebooks/' + lb.id + '/edit')">
-            <div class="lb-icon">📖</div>
-            <div class="lb-info">
-              <div class="lb-title">{{ lb.title }}</div>
-              <div class="lb-meta">
-                <span>{{ lb.entries.length || 0 }} entries</span>
-                <span class="dot">·</span>
-                <span>Updated {{ getRelativeTime(lb.updatedAt) }}</span>
-              </div>
-              <div class="lb-description" *ngIf="lb.description">{{ lb.description | slice:0:80 }}{{ lb.description.length > 80 ? '...' : '' }}</div>
-            </div>
-          </div>
-          <div class="lb-tags" *ngIf="lb.tags.length > 0">
-            <ion-chip *ngFor="let tag of lb.tags | slice:0:3" class="mb-chip">{{ tag }}</ion-chip>
-          </div>
-          <div class="lb-actions">
-            <ion-button fill="clear" size="small" (click)="navigateTo('/lorebooks/' + lb.id + '/edit')">
-              <ion-icon slot="icon-only" name="create-outline"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" size="small" (click)="duplicate(lb)">
-              <ion-icon slot="icon-only" name="copy-outline"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" size="small" (click)="exportLorebook(lb)">
-              <ion-icon slot="icon-only" name="download-outline"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" size="small" color="danger" (click)="confirmDelete(lb)">
-              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-            </ion-button>
-          </div>
+      @if (lorebooks.length === 0) {
+        <div class="mb-empty-state">
+          <ion-icon name="library-outline"></ion-icon>
+          <h3>No Lorebooks Yet</h3>
+          <p>Create lorebooks to add world-building lore, factions, locations, and more to your scenarios</p>
+          <ion-button class="mb-btn-primary" (click)="navigateTo('/lorebooks/new')">
+            <ion-icon slot="start" name="add-outline"></ion-icon>
+            Create Lorebook
+          </ion-button>
         </div>
-      </div>
-
+      }
+    
+      @if (lorebooks.length > 0) {
+        <div class="lorebook-list">
+          @for (lb of lorebooks; track lb; let i = $index) {
+            <div
+              class="lorebook-card mb-glass-card mb-fade-in"
+              [style.animation-delay]="(i * 0.05) + 's'">
+              <div class="lb-header" (click)="navigateTo('/lorebooks/' + lb.id + '/edit')">
+                <div class="lb-icon">📖</div>
+                <div class="lb-info">
+                  <div class="lb-title">{{ lb.title }}</div>
+                  <div class="lb-meta">
+                    <span>{{ lb.entries.length || 0 }} entries</span>
+                    <span class="dot">·</span>
+                    <span>Updated {{ getRelativeTime(lb.updatedAt) }}</span>
+                  </div>
+                  @if (lb.description) {
+                    <div class="lb-description">{{ lb.description | slice:0:80 }}{{ lb.description.length > 80 ? '...' : '' }}</div>
+                  }
+                </div>
+              </div>
+              @if (lb.tags.length > 0) {
+                <div class="lb-tags">
+                  @for (tag of lb.tags | slice:0:3; track tag) {
+                    <ion-chip class="mb-chip">{{ tag }}</ion-chip>
+                  }
+                </div>
+              }
+              <div class="lb-actions">
+                <ion-button fill="clear" size="small" (click)="navigateTo('/lorebooks/' + lb.id + '/edit')">
+                  <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                </ion-button>
+                <ion-button fill="clear" size="small" (click)="duplicate(lb)">
+                  <ion-icon slot="icon-only" name="copy-outline"></ion-icon>
+                </ion-button>
+                <ion-button fill="clear" size="small" (click)="exportLorebook(lb)">
+                  <ion-icon slot="icon-only" name="download-outline"></ion-icon>
+                </ion-button>
+                <ion-button fill="clear" size="small" color="danger" (click)="confirmDelete(lb)">
+                  <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                </ion-button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    
       <ion-fab slot="fixed" vertical="bottom" horizontal="end">
         <ion-fab-button (click)="navigateTo('/lorebooks/new')">
           <ion-icon name="add-outline"></ion-icon>
         </ion-fab-button>
       </ion-fab>
-
+    
       <!-- Hidden file input for import -->
       <input type="file" #importInput accept=".json" (change)="onImportFileSelected($event)" style="display:none" />
     </ion-content>
-  `,
+    `,
   styles: [`
     .lorebook-list {
       display: flex;

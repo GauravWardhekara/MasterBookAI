@@ -57,7 +57,7 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
-
+    
       <!-- Story Controls Bar -->
       <ion-toolbar class="controls-bar">
         <div class="controls-row">
@@ -72,210 +72,252 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
           <div class="word-count">{{ totalWordCount }} words</div>
         </div>
       </ion-toolbar>
-
+    
       <!-- Connection indicator -->
-      <ion-toolbar class="connection-bar" *ngIf="connectionProfile">
-        <div class="connection-indicator">
-          <div class="conn-dot connected"></div>
-          <span class="conn-label">{{ connectionProfile.name }}</span>
-          <span class="conn-model" *ngIf="activeModel">{{ activeModel }}</span>
-          <span class="memory-indicator" *ngIf="injectedMemoryCount > 0">
-            <ion-icon name="bulb-outline"></ion-icon>
-            {{ injectedMemoryCount }} memories
-          </span>
-        </div>
-      </ion-toolbar>
+      @if (connectionProfile) {
+        <ion-toolbar class="connection-bar">
+          <div class="connection-indicator">
+            <div class="conn-dot connected"></div>
+            <span class="conn-label">{{ connectionProfile.name }}</span>
+            @if (activeModel) {
+              <span class="conn-model">{{ activeModel }}</span>
+            }
+            @if (injectedMemoryCount > 0) {
+              <span class="memory-indicator">
+                <ion-icon name="bulb-outline"></ion-icon>
+                {{ injectedMemoryCount }} memories
+              </span>
+            }
+          </div>
+        </ion-toolbar>
+      }
     </ion-header>
-
+    
     <ion-content #storyContentRef class="story-content">
       <div class="story-container">
         <!-- No connection warning -->
-        <div *ngIf="!connectionProfile" class="no-connection-banner mb-fade-in">
-          <ion-icon name="settings-outline"></ion-icon>
-          <span>No LLM connection configured.</span>
-          <ion-button fill="clear" size="small" (click)="goToSettings()">
-            Set Up Connection
-          </ion-button>
-        </div>
-
+        @if (!connectionProfile) {
+          <div class="no-connection-banner mb-fade-in">
+            <ion-icon name="settings-outline"></ion-icon>
+            <span>No LLM connection configured.</span>
+            <ion-button fill="clear" size="small" (click)="goToSettings()">
+              Set Up Connection
+            </ion-button>
+          </div>
+        }
+    
         <!-- Story Area -->
-        <div *ngIf="session" class="story-area mb-fade-in">
-          <!-- Story Header -->
-          <div class="story-header" *ngIf="scenario">
-            <div class="story-header-icon">📖</div>
-            <div class="story-header-info">
-              <div class="story-header-title">{{ scenario.title }}</div>
-              <div class="story-header-meta">
-                {{ pov === '1st-person' ? 'First Person' : 'Third Person' }} ·
-                {{ tense | titlecase }} Tense
-              </div>
-            </div>
-          </div>
-
-          <!-- Author's Note Toggle -->
-          <div class="authors-note-section" *ngIf="showAuthorsNote">
-            <div class="authors-note-header">
-              <ion-icon name="create-outline"></ion-icon>
-              <span>Author's Note</span>
-              <ion-button fill="clear" size="small" (click)="showAuthorsNote = false">
-                <ion-icon slot="icon-only" name="chevron-up-outline"></ion-icon>
-              </ion-button>
-            </div>
-            <ion-textarea
-              [(ngModel)]="authorsNote"
-              placeholder="Add guidance for the AI... (e.g., 'Focus on dialogue', 'Build tension')"
-              rows="2"
-              class="authors-note-input"
-            ></ion-textarea>
-          </div>
-          <ion-button *ngIf="!showAuthorsNote" fill="clear" size="small" class="toggle-note-btn"
-                      (click)="showAuthorsNote = true">
-            <ion-icon slot="start" name="create-outline"></ion-icon>
-            Author's Note
-          </ion-button>
-
-          <!-- ═══ BOOK PAGE ═══ -->
-          <div class="book-page">
-            <!-- Empty State -->
-            <div *ngIf="storyBlocks.length === 0 && !isStreaming" class="story-empty">
-              <div class="empty-icon">✍️</div>
-              <h3>Begin Your Story</h3>
-              <p>Give a direction or let the AI start the narrative</p>
-              <div class="start-actions">
-                <ion-button class="mb-btn-primary" (click)="generateContinuation()">
-                  <ion-icon slot="start" name="sparkles-outline"></ion-icon>
-                  AI Writes Opening
-                </ion-button>
-                <ion-button class="mb-btn-secondary" (click)="focusInput()">
-                  <ion-icon slot="start" name="create-outline"></ion-icon>
-                  Give a Direction
-                </ion-button>
-              </div>
-            </div>
-
-            <!-- Story Blocks -->
-            <ng-container *ngFor="let block of storyBlocks; let i = index; trackBy: trackByBlockIndex">
-
-              <!-- ── User Direction (collapsible chip) ── -->
-              <div *ngIf="block.role === 'user'" class="direction-chip"
-                   [class.expanded]="expandedDirections.has(block.id)"
-                   (click)="toggleDirection(block.id)">
-                <div class="direction-header">
-                  <ion-icon name="create-outline"></ion-icon>
-                  <span>Author's Direction</span>
-                  <ion-icon [name]="expandedDirections.has(block.id) ? 'chevron-up-outline' : 'chevron-down-outline'"
-                            class="direction-toggle"></ion-icon>
-                </div>
-                <div class="direction-content" *ngIf="expandedDirections.has(block.id)">
-                  {{ block.content }}
-                </div>
-                <div class="block-actions direction-actions" *ngIf="!isStreaming" (click)="$event.stopPropagation()">
-                  <ion-button fill="clear" size="small" (click)="editBlock(i)" title="Edit">
-                    <ion-icon slot="icon-only" name="create-outline"></ion-icon>
-                  </ion-button>
-                  <ion-button *ngIf="i === storyBlocks.length - 1"
-                              fill="clear" size="small" color="danger"
-                              (click)="undoLastBlock()" title="Undo">
-                    <ion-icon slot="icon-only" name="arrow-undo-outline"></ion-icon>
-                  </ion-button>
-                </div>
-              </div>
-
-              <!-- ── AI Story Prose ── -->
-              <div *ngIf="block.role === 'assistant'" class="prose-block"
-                   [class.first-ai-block]="isFirstAIBlock(i)">
-                <!-- Ornamental separator between AI blocks -->
-                <div *ngIf="hasPreviousAIBlock(i)" class="ornamental-separator">
-                  <span>· · ·</span>
-                </div>
-
-                <div class="prose-text" [innerHTML]="formatProse(block.content)"></div>
-
-                <!-- Book illustrations -->
-                <div *ngIf="block.generatedImageRefs && block.generatedImageRefs.length > 0" class="book-illustrations">
-                  <div *ngFor="let imgUrl of block.generatedImageRefs" class="book-illustration">
-                    <img [src]="imgUrl" alt="Illustration" />
+        @if (session) {
+          <div class="story-area mb-fade-in">
+            <!-- Story Header -->
+            @if (scenario) {
+              <div class="story-header">
+                <div class="story-header-icon">📖</div>
+                <div class="story-header-info">
+                  <div class="story-header-title">{{ scenario.title }}</div>
+                  <div class="story-header-meta">
+                    {{ pov === '1st-person' ? 'First Person' : 'Third Person' }} ·
+                    {{ tense | titlecase }} Tense
                   </div>
                 </div>
-
-                <!-- Block actions (on hover) -->
-                <div class="block-actions" *ngIf="!isStreaming">
-                  <ion-button fill="clear" size="small" (click)="editBlock(i)" title="Edit">
-                    <ion-icon slot="icon-only" name="create-outline"></ion-icon>
-                  </ion-button>
-                  <ion-button *ngIf="i === storyBlocks.length - 1"
-                              fill="clear" size="small" (click)="regenerateLastBlock()" title="Regenerate">
-                    <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
-                  </ion-button>
-                  <ion-button fill="clear" size="small" (click)="pinBlockAsMemory(block)" title="Pin as Memory"
-                              [color]="block.isPinnedAsMemory ? 'warning' : undefined">
-                    <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
-                  </ion-button>
-                  <ion-button fill="clear" size="small" (click)="openImageGen(block)" title="Generate Image">
-                    <ion-icon slot="icon-only" name="image-outline"></ion-icon>
-                  </ion-button>
-                  <ion-button *ngIf="i === storyBlocks.length - 1"
-                              fill="clear" size="small" color="danger"
-                              (click)="undoLastBlock()" title="Undo">
-                    <ion-icon slot="icon-only" name="arrow-undo-outline"></ion-icon>
+              </div>
+            }
+            <!-- Author's Note Toggle -->
+            @if (showAuthorsNote) {
+              <div class="authors-note-section">
+                <div class="authors-note-header">
+                  <ion-icon name="create-outline"></ion-icon>
+                  <span>Author's Note</span>
+                  <ion-button fill="clear" size="small" (click)="showAuthorsNote = false">
+                    <ion-icon slot="icon-only" name="chevron-up-outline"></ion-icon>
                   </ion-button>
                 </div>
+                <ion-textarea
+                  [(ngModel)]="authorsNote"
+                  placeholder="Add guidance for the AI... (e.g., 'Focus on dialogue', 'Build tension')"
+                  rows="2"
+                  class="authors-note-input"
+                ></ion-textarea>
               </div>
-
-              <!-- ── System Note ── -->
-              <div *ngIf="block.role === 'system' || block.role === 'narrator'" class="system-note">
-                {{ block.content }}
-              </div>
-
-            </ng-container>
-
-            <!-- ── Streaming Block ── -->
-            <div *ngIf="isStreaming" class="prose-block streaming-block">
-              <div *ngIf="hasAnyAIBlock()" class="ornamental-separator">
-                <span>· · ·</span>
-              </div>
-              <div class="prose-text" [innerHTML]="formatProse(streamingContent)"></div>
-              <span class="typing-cursor">▊</span>
+            }
+            @if (!showAuthorsNote) {
+              <ion-button fill="clear" size="small" class="toggle-note-btn"
+                (click)="showAuthorsNote = true">
+                <ion-icon slot="start" name="create-outline"></ion-icon>
+                Author's Note
+              </ion-button>
+            }
+            <!-- ═══ BOOK PAGE ═══ -->
+            <div class="book-page">
+              <!-- Empty State -->
+              @if (storyBlocks.length === 0 && !isStreaming) {
+                <div class="story-empty">
+                  <div class="empty-icon">✍️</div>
+                  <h3>Begin Your Story</h3>
+                  <p>Give a direction or let the AI start the narrative</p>
+                  <div class="start-actions">
+                    <ion-button class="mb-btn-primary" (click)="generateContinuation()">
+                      <ion-icon slot="start" name="sparkles-outline"></ion-icon>
+                      AI Writes Opening
+                    </ion-button>
+                    <ion-button class="mb-btn-secondary" (click)="focusInput()">
+                      <ion-icon slot="start" name="create-outline"></ion-icon>
+                      Give a Direction
+                    </ion-button>
+                  </div>
+                </div>
+              }
+              <!-- Story Blocks -->
+              @for (block of storyBlocks; track block.id || $index; let i = $index) {
+                <!-- ── User Direction (collapsible chip) ── -->
+                @if (block.role === 'user') {
+                  <div class="direction-chip"
+                    [class.expanded]="expandedDirections.has(block.id)"
+                    (click)="toggleDirection(block.id)">
+                    <div class="direction-header">
+                      <ion-icon name="create-outline"></ion-icon>
+                      <span>Author's Direction</span>
+                      <ion-icon [name]="expandedDirections.has(block.id) ? 'chevron-up-outline' : 'chevron-down-outline'"
+                      class="direction-toggle"></ion-icon>
+                    </div>
+                    @if (expandedDirections.has(block.id)) {
+                      <div class="direction-content">
+                        {{ block.content }}
+                      </div>
+                    }
+                    @if (!isStreaming) {
+                      <div class="block-actions direction-actions" (click)="$event.stopPropagation()">
+                        <ion-button fill="clear" size="small" (click)="editBlock(i)" title="Edit">
+                          <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                        </ion-button>
+                        @if (i === storyBlocks.length - 1) {
+                          <ion-button
+                            fill="clear" size="small" color="danger"
+                            (click)="undoLastBlock()" title="Undo">
+                            <ion-icon slot="icon-only" name="arrow-undo-outline"></ion-icon>
+                          </ion-button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+                <!-- ── AI Story Prose ── -->
+                @if (block.role === 'assistant') {
+                  <div class="prose-block"
+                    [class.first-ai-block]="isFirstAIBlock(i)">
+                    <!-- Ornamental separator between AI blocks -->
+                    @if (hasPreviousAIBlock(i)) {
+                      <div class="ornamental-separator">
+                        <span>· · ·</span>
+                      </div>
+                    }
+                    <div class="prose-text" [innerHTML]="formatProse(block.content)"></div>
+                    <!-- Book illustrations -->
+                    @if (block.generatedImageRefs && block.generatedImageRefs.length > 0) {
+                      <div class="book-illustrations">
+                        @for (imgUrl of block.generatedImageRefs; track imgUrl) {
+                          <div class="book-illustration">
+                            <img [src]="imgUrl" alt="Illustration" />
+                          </div>
+                        }
+                      </div>
+                    }
+                    <!-- Block actions (on hover) -->
+                    @if (!isStreaming) {
+                      <div class="block-actions">
+                        <ion-button fill="clear" size="small" (click)="editBlock(i)" title="Edit">
+                          <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                        </ion-button>
+                        @if (i === storyBlocks.length - 1) {
+                          <ion-button
+                            fill="clear" size="small" (click)="regenerateLastBlock()" title="Regenerate">
+                            <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+                          </ion-button>
+                        }
+                        <ion-button fill="clear" size="small" (click)="pinBlockAsMemory(block)" title="Pin as Memory"
+                          [color]="block.isPinnedAsMemory ? 'warning' : undefined">
+                          <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
+                        </ion-button>
+                        <ion-button fill="clear" size="small" (click)="openImageGen(block)" title="Generate Image">
+                          <ion-icon slot="icon-only" name="image-outline"></ion-icon>
+                        </ion-button>
+                        @if (i === storyBlocks.length - 1) {
+                          <ion-button
+                            fill="clear" size="small" color="danger"
+                            (click)="undoLastBlock()" title="Undo">
+                            <ion-icon slot="icon-only" name="arrow-undo-outline"></ion-icon>
+                          </ion-button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+                <!-- ── System Note ── -->
+                @if (block.role === 'system' || block.role === 'narrator') {
+                  <div class="system-note">
+                    {{ block.content }}
+                  </div>
+                }
+              }
+              <!-- ── Streaming Block ── -->
+              @if (isStreaming) {
+                <div class="prose-block streaming-block">
+                  @if (hasAnyAIBlock()) {
+                    <div class="ornamental-separator">
+                      <span>· · ·</span>
+                    </div>
+                  }
+                  <div class="prose-text" [innerHTML]="formatProse(streamingContent)"></div>
+                  <span class="typing-cursor">▊</span>
+                </div>
+              }
             </div>
+            <!-- Scroll anchor -->
+            <div #scrollAnchor></div>
           </div>
-
-          <!-- Scroll anchor -->
-          <div #scrollAnchor></div>
-        </div>
+        }
       </div>
     </ion-content>
-
-    <ion-footer *ngIf="session">
-      <ion-toolbar class="story-input-toolbar">
-        <div class="story-input-area">
-          <textarea #storyInput
-            class="story-input"
-            [placeholder]="isStreaming ? 'AI is writing...' : 'Give a direction for the story...'"
-            [(ngModel)]="inputText"
-            (keydown)="onKeyDown($event)"
-            [disabled]="isStreaming"
-            rows="2"
-          ></textarea>
-          <div class="story-input-actions">
-            <ion-button *ngIf="!isStreaming" class="action-btn"
-                        [disabled]="!inputText.trim() || !connectionProfile"
-                        fill="clear" (click)="submitUserText()" title="Send direction & generate">
-              <ion-icon slot="icon-only" name="send-outline"></ion-icon>
-            </ion-button>
-            <ion-button *ngIf="!isStreaming" class="action-btn continue-btn"
-                        [disabled]="!connectionProfile"
-                        fill="clear" (click)="generateContinuation()" title="Continue without direction">
-              <ion-icon slot="icon-only" name="play-forward-outline"></ion-icon>
-            </ion-button>
-            <ion-button *ngIf="isStreaming" class="action-btn stop-btn"
-                        fill="clear" (click)="stopStreaming()">
-              Stop
-            </ion-button>
+    
+    @if (session) {
+      <ion-footer>
+        <ion-toolbar class="story-input-toolbar">
+          <div class="story-input-area">
+            <textarea #storyInput
+              class="story-input"
+              [placeholder]="isStreaming ? 'AI is writing...' : 'Give a direction for the story...'"
+              [(ngModel)]="inputText"
+              (keydown)="onKeyDown($event)"
+              [disabled]="isStreaming"
+              rows="2"
+            ></textarea>
+            <div class="story-input-actions">
+              @if (!isStreaming) {
+                <ion-button class="action-btn"
+                  [disabled]="!inputText.trim() || !connectionProfile"
+                  fill="clear" (click)="submitUserText()" title="Send direction & generate">
+                  <ion-icon slot="icon-only" name="send-outline"></ion-icon>
+                </ion-button>
+              }
+              @if (!isStreaming) {
+                <ion-button class="action-btn continue-btn"
+                  [disabled]="!connectionProfile"
+                  fill="clear" (click)="generateContinuation()" title="Continue without direction">
+                  <ion-icon slot="icon-only" name="play-forward-outline"></ion-icon>
+                </ion-button>
+              }
+              @if (isStreaming) {
+                <ion-button class="action-btn stop-btn"
+                  fill="clear" (click)="stopStreaming()">
+                  Stop
+                </ion-button>
+              }
+            </div>
           </div>
-        </div>
-      </ion-toolbar>
-    </ion-footer>
-  `,
+        </ion-toolbar>
+      </ion-footer>
+    }
+    `,
   styles: [`
     /* ═══════════════════════════════════════
        LAYOUT & HEADER

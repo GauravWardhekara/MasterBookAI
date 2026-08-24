@@ -1,5 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -36,16 +36,16 @@ import { ImageGenMoreSettingsComponent } from './image-gen-more-settings.compone
         <ion-title class="ig-title">Image Generation</ion-title>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="ig-content ion-padding">
       <div class="ig-form">
-
+    
         <!-- Reference last prompt -->
         <div class="ig-row align-center">
           <div class="ig-label">Reference last prompt <ion-icon name="help-circle-outline"></ion-icon></div>
           <ion-toggle [(ngModel)]="referenceLastPrompt" class="mb-toggle"></ion-toggle>
         </div>
-
+    
         <!-- Prompt -->
         <div class="ig-row header-row mt-4">
           <div class="ig-label">Prompt</div>
@@ -54,16 +54,18 @@ import { ImageGenMoreSettingsComponent } from './image-gen-more-settings.compone
         <div class="ig-textarea-box mt-2">
           <textarea [(ngModel)]="promptText" rows="7" class="ig-textarea" placeholder="Describe the image you want..."></textarea>
         </div>
-
+    
         <!-- Negative Prompt -->
         <div class="ig-accordion mt-4" (click)="isNegativePromptOpen = !isNegativePromptOpen">
           <div class="ig-label">Negative Prompt</div>
           <ion-icon [name]="isNegativePromptOpen ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
         </div>
-        <div class="ig-textarea-box mt-2" *ngIf="isNegativePromptOpen">
-          <textarea [(ngModel)]="negativePromptText" rows="3" class="ig-textarea" placeholder="What you don't want in the image..."></textarea>
-        </div>
-
+        @if (isNegativePromptOpen) {
+          <div class="ig-textarea-box mt-2">
+            <textarea [(ngModel)]="negativePromptText" rows="3" class="ig-textarea" placeholder="What you don't want in the image..."></textarea>
+          </div>
+        }
+    
         <!-- Model -->
         <div class="ig-row header-row mt-4">
           <div class="ig-label">Model</div>
@@ -78,7 +80,7 @@ import { ImageGenMoreSettingsComponent } from './image-gen-more-settings.compone
             <div class="model-sub">{{ getProviderName() }}</div>
           </div>
         </div>
-
+    
         <!-- Spells -->
         <div class="ig-row header-row mt-4">
           <div class="ig-label">Spells <span class="sub-text">(Selected 0/5)</span></div>
@@ -89,13 +91,13 @@ import { ImageGenMoreSettingsComponent } from './image-gen-more-settings.compone
             <ion-icon name="add-outline"></ion-icon> Select spells
           </div>
         </div>
-
+    
         <!-- ADetailer -->
         <div class="ig-row align-center mt-4">
           <div class="ig-label">ADetailer <ion-icon name="help-circle-outline"></ion-icon></div>
           <ion-toggle [(ngModel)]="aDetailerEnabled" class="mb-toggle"></ion-toggle>
         </div>
-
+    
         <!-- Canvas Size -->
         <div class="ig-row flex-col mt-4">
           <div class="ig-label mb-2">Canvas Size</div>
@@ -112,7 +114,7 @@ import { ImageGenMoreSettingsComponent } from './image-gen-more-settings.compone
             <ion-icon name="chevron-down-outline" class="select-icon"></ion-icon>
           </div>
         </div>
-
+    
         <!-- Number of Images -->
         <div class="ig-row flex-col mt-4">
           <div class="ig-label mb-2">Number of Images</div>
@@ -122,38 +124,42 @@ import { ImageGenMoreSettingsComponent } from './image-gen-more-settings.compone
             <div class="ig-segment" [class.active]="sessionConfig.imageCount === 4" (click)="sessionConfig.imageCount = 4">4</div>
           </div>
         </div>
-
+    
         <!-- More Settings -->
         <div class="ig-accordion mt-4" (click)="openMoreSettings()">
           <div class="ig-label">More Settings</div>
           <ion-icon name="chevron-forward-outline"></ion-icon>
         </div>
-
+    
         <!-- Results -->
-        <div class="ig-results mt-5" *ngIf="generatedImages.length > 0">
-          <div class="ig-row header-row mb-2">
-            <div class="ig-label">Generated Images</div>
-          </div>
-          <div class="image-results">
-            <div *ngFor="let img of generatedImages; let i = index"
-                 class="image-result-card mb-fade-in"
-                 [style.animation-delay]="(i * 0.1) + 's'">
-              <img [src]="img.imageUrl" alt="Generated image" class="result-image" />
-              <div class="result-actions">
-                <ion-button fill="clear" size="small" (click)="downloadImage(img)">
-                  <ion-icon slot="icon-only" name="download-outline"></ion-icon>
-                </ion-button>
-                <ion-button fill="clear" size="small" (click)="attachToMessage(img)">
-                  <ion-icon slot="icon-only" name="checkmark-outline"></ion-icon>
-                </ion-button>
-              </div>
+        @if (generatedImages.length > 0) {
+          <div class="ig-results mt-5">
+            <div class="ig-row header-row mb-2">
+              <div class="ig-label">Generated Images</div>
+            </div>
+            <div class="image-results">
+              @for (img of generatedImages; track img; let i = $index) {
+                <div
+                  class="image-result-card mb-fade-in"
+                  [style.animation-delay]="(i * 0.1) + 's'">
+                  <img [src]="img.imageUrl" alt="Generated image" class="result-image" />
+                  <div class="result-actions">
+                    <ion-button fill="clear" size="small" (click)="downloadImage(img)">
+                      <ion-icon slot="icon-only" name="download-outline"></ion-icon>
+                    </ion-button>
+                    <ion-button fill="clear" size="small" (click)="attachToMessage(img)">
+                      <ion-icon slot="icon-only" name="checkmark-outline"></ion-icon>
+                    </ion-button>
+                  </div>
+                </div>
+              }
             </div>
           </div>
-        </div>
-
+        }
+    
       </div>
     </ion-content>
-
+    
     <ion-footer class="ig-footer ion-no-border">
       <div class="show-next-time">
         <div class="snt-text">
@@ -162,13 +168,15 @@ import { ImageGenMoreSettingsComponent } from './image-gen-more-settings.compone
         </div>
         <ion-toggle [(ngModel)]="showNextTime" color="success" class="mb-toggle success-toggle"></ion-toggle>
       </div>
-      
+    
       <button class="ig-generate-btn" (click)="generateImages()" [disabled]="isGenerating || !promptText.trim()">
         <span>{{ isGenerating ? 'Generating...' : 'Generate' }}</span>
-        <span class="cost-badge" *ngIf="!isGenerating"><ion-icon name="happy-outline"></ion-icon> 12</span>
+        @if (!isGenerating) {
+          <span class="cost-badge"><ion-icon name="happy-outline"></ion-icon> 12</span>
+        }
       </button>
     </ion-footer>
-  `,
+    `,
   styles: [`
     .ig-header { background: #1c1c1e; }
     .transparent-toolbar { --background: transparent; color: white; }
@@ -296,10 +304,17 @@ import { ImageGenMoreSettingsComponent } from './image-gen-more-settings.compone
     }
   `],
   imports: [
-    CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonButtons, IonToggle, IonFooter
-  ],
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonButton,
+    IonIcon,
+    IonButtons,
+    IonToggle,
+    IonFooter
+],
 })
 export class ImageGenPage implements OnInit {
   @Input() messages: Message[] = [];

@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -33,7 +33,7 @@ import { Character } from '../../../core/models/character.model';
         </ion-button>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="ion-padding">
       <div class="editor-form mb-fade-in">
         <!-- Lorebook Info -->
@@ -53,14 +53,18 @@ import { Character } from '../../../core/models/character.model';
                 <ion-icon slot="icon-only" name="add-outline"></ion-icon>
               </ion-button>
             </div>
-            <div class="tags-list" *ngIf="lorebook.tags && lorebook.tags.length > 0">
-              <ion-chip *ngFor="let tag of lorebook.tags" (click)="removeTag(tag)">
-                {{ tag }} <ion-icon name="close-outline"></ion-icon>
-              </ion-chip>
-            </div>
+            @if (lorebook.tags && lorebook.tags.length > 0) {
+              <div class="tags-list">
+                @for (tag of lorebook.tags; track tag) {
+                  <ion-chip (click)="removeTag(tag)">
+                    {{ tag }} <ion-icon name="close-outline"></ion-icon>
+                  </ion-chip>
+                }
+              </div>
+            }
           </div>
         </div>
-
+    
         <!-- Entries Section -->
         <div class="form-section">
           <div class="mb-section-header">
@@ -70,176 +74,188 @@ import { Character } from '../../../core/models/character.model';
               Add Entry
             </ion-button>
           </div>
-
+    
           <!-- Filter by type -->
-          <div class="type-filter" *ngIf="entries.length > 0">
-            <span class="mb-chip" [class.active]="filterType === null" (click)="filterType = null">All</span>
-            <span *ngFor="let lt of loreTypes" class="mb-chip" [class.active]="filterType === lt"
+          @if (entries.length > 0) {
+            <div class="type-filter">
+              <span class="mb-chip" [class.active]="filterType === null" (click)="filterType = null">All</span>
+              @for (lt of loreTypes; track lt) {
+                <span class="mb-chip" [class.active]="filterType === lt"
                   (click)="filterType = lt">
-              {{ getLoreTypeMeta(lt).label }}
-            </span>
-          </div>
-
-          <!-- Entry List -->
-          <div *ngIf="filteredEntries.length === 0 && entries.length === 0" class="mb-empty-state" style="padding: 24px">
-            <ion-icon name="book-outline"></ion-icon>
-            <h3>No Entries Yet</h3>
-            <p>Add lore entries with trigger words, descriptions, and links</p>
-          </div>
-
-          <div class="entries-list">
-            <div *ngFor="let entry of filteredEntries; let i = index"
-                 class="entry-card mb-card mb-fade-in"
-                 [style.animation-delay]="(i * 0.03) + 's'"
-                 [class.disabled]="!entry.isEnabled">
-
-              <!-- Entry Header (collapsed view) -->
-              <div class="entry-header" *ngIf="expandedEntryId !== entry.id" (click)="expandedEntryId = entry.id">
-                <span class="mb-badge mb-badge-{{ entry.loreType }}">{{ getLoreTypeMeta(entry.loreType).label }}</span>
-                <span class="entry-title">{{ entry.title || 'Untitled' }}</span>
-                <span class="entry-trigger-count">{{ entry.triggerWords.length }} triggers</span>
-                <span class="entry-links" *ngIf="entry.linkedLoreEntryIds.length + entry.linkedCharacterIds.length > 0">
-                  <ion-icon name="link-outline"></ion-icon>
-                  {{ entry.linkedLoreEntryIds.length + entry.linkedCharacterIds.length }}
+                  {{ getLoreTypeMeta(lt).label }}
                 </span>
-                <ion-button fill="clear" size="small" (click)="toggleEntry(entry, $event)">
-                  <ion-icon slot="icon-only" [name]="entry.isEnabled ? 'eye-outline' : 'eye-off-outline'"></ion-icon>
-                </ion-button>
-              </div>
-
-              <!-- Entry Expanded (edit view) -->
-              <div class="entry-expanded" *ngIf="expandedEntryId === entry.id">
-                <div class="entry-expanded-header">
-                  <span class="entry-title-edit">{{ entry.title || 'Untitled Entry' }}</span>
-                  <ion-button fill="clear" size="small" (click)="expandedEntryId = null">
-                    <ion-icon slot="icon-only" name="close-outline"></ion-icon>
-                  </ion-button>
-                </div>
-
-                <div class="form-field">
-                  <label>Title</label>
-                  <ion-input [(ngModel)]="entry.title" placeholder="Entry title..." class="mb-input"></ion-input>
-                </div>
-
-                <div class="form-field">
-                  <label>Lore Type</label>
-                  <div class="type-selector">
-                    <span *ngFor="let lt of loreTypes" class="mb-chip"
-                          [class.active]="entry.loreType === lt"
-                          [style.border-color]="entry.loreType === lt ? getLoreTypeMeta(lt).color : ''"
-                          (click)="entry.loreType = lt">
-                      {{ getLoreTypeMeta(lt).label }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="form-field">
-                  <label>Lore Description (for AI)</label>
-                  <ion-textarea [(ngModel)]="entry.loreDescription" placeholder="Describe this lore for the AI..." rows="4" class="mb-input"></ion-textarea>
-                </div>
-
-                <div class="form-field">
-                  <label>Trigger Words</label>
-                  <div class="tags-input-row">
-                    <ion-input [(ngModel)]="newTriggerWord" placeholder="Add trigger word..." class="mb-input" (keyup.enter)="addTriggerWord(entry)"></ion-input>
-                    <ion-button fill="clear" (click)="addTriggerWord(entry)">
-                      <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+              }
+            </div>
+          }
+    
+          <!-- Entry List -->
+          @if (filteredEntries.length === 0 && entries.length === 0) {
+            <div class="mb-empty-state" style="padding: 24px">
+              <ion-icon name="book-outline"></ion-icon>
+              <h3>No Entries Yet</h3>
+              <p>Add lore entries with trigger words, descriptions, and links</p>
+            </div>
+          }
+    
+          <div class="entries-list">
+            @for (entry of filteredEntries; track entry; let i = $index) {
+              <div
+                class="entry-card mb-card mb-fade-in"
+                [style.animation-delay]="(i * 0.03) + 's'"
+                [class.disabled]="!entry.isEnabled">
+                <!-- Entry Header (collapsed view) -->
+                @if (expandedEntryId !== entry.id) {
+                  <div class="entry-header" (click)="expandedEntryId = entry.id">
+                    <span class="mb-badge mb-badge-{{ entry.loreType }}">{{ getLoreTypeMeta(entry.loreType).label }}</span>
+                    <span class="entry-title">{{ entry.title || 'Untitled' }}</span>
+                    <span class="entry-trigger-count">{{ entry.triggerWords.length }} triggers</span>
+                    @if (entry.linkedLoreEntryIds.length + entry.linkedCharacterIds.length > 0) {
+                      <span class="entry-links">
+                        <ion-icon name="link-outline"></ion-icon>
+                        {{ entry.linkedLoreEntryIds.length + entry.linkedCharacterIds.length }}
+                      </span>
+                    }
+                    <ion-button fill="clear" size="small" (click)="toggleEntry(entry, $event)">
+                      <ion-icon slot="icon-only" [name]="entry.isEnabled ? 'eye-outline' : 'eye-off-outline'"></ion-icon>
                     </ion-button>
                   </div>
-                  <div class="tags-list">
-                    <ion-chip *ngFor="let tw of entry.triggerWords" (click)="removeTriggerWord(entry, tw)">
-                      {{ tw }} <ion-icon name="close-outline"></ion-icon>
-                    </ion-chip>
-                  </div>
-                </div>
-
-                <!-- Linked Entries -->
-                <div class="form-field">
-                  <label>Linked Lore Entries</label>
-                  <div class="linked-items">
-                    <div *ngFor="let linkedId of entry.linkedLoreEntryIds" class="linked-item">
-                      <ion-icon name="link-outline"></ion-icon>
-                      <span>{{ getEntryTitle(linkedId) }}</span>
-                      <ion-button fill="clear" size="small" color="danger" (click)="unlinkEntry(entry, linkedId)">
+                }
+                <!-- Entry Expanded (edit view) -->
+                @if (expandedEntryId === entry.id) {
+                  <div class="entry-expanded">
+                    <div class="entry-expanded-header">
+                      <span class="entry-title-edit">{{ entry.title || 'Untitled Entry' }}</span>
+                      <ion-button fill="clear" size="small" (click)="expandedEntryId = null">
                         <ion-icon slot="icon-only" name="close-outline"></ion-icon>
                       </ion-button>
                     </div>
-                  </div>
-                  <ion-button fill="clear" size="small" (click)="showLinkEntryPicker(entry)">
-                    <ion-icon slot="start" name="add-outline"></ion-icon>
-                    Link Entry
-                  </ion-button>
-                </div>
-
-                <!-- Linked Characters -->
-                <div class="form-field">
-                  <label>Linked Characters</label>
-                  <div class="linked-items">
-                    <div *ngFor="let charId of entry.linkedCharacterIds" class="linked-item">
-                      <ion-icon name="people-outline"></ion-icon>
-                      <span>{{ getCharacterName(charId) }}</span>
-                      <ion-button fill="clear" size="small" color="danger" (click)="unlinkCharacter(entry, charId)">
-                        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+                    <div class="form-field">
+                      <label>Title</label>
+                      <ion-input [(ngModel)]="entry.title" placeholder="Entry title..." class="mb-input"></ion-input>
+                    </div>
+                    <div class="form-field">
+                      <label>Lore Type</label>
+                      <div class="type-selector">
+                        @for (lt of loreTypes; track lt) {
+                          <span class="mb-chip"
+                            [class.active]="entry.loreType === lt"
+                            [style.border-color]="entry.loreType === lt ? getLoreTypeMeta(lt).color : ''"
+                            (click)="entry.loreType = lt">
+                            {{ getLoreTypeMeta(lt).label }}
+                          </span>
+                        }
+                      </div>
+                    </div>
+                    <div class="form-field">
+                      <label>Lore Description (for AI)</label>
+                      <ion-textarea [(ngModel)]="entry.loreDescription" placeholder="Describe this lore for the AI..." rows="4" class="mb-input"></ion-textarea>
+                    </div>
+                    <div class="form-field">
+                      <label>Trigger Words</label>
+                      <div class="tags-input-row">
+                        <ion-input [(ngModel)]="newTriggerWord" placeholder="Add trigger word..." class="mb-input" (keyup.enter)="addTriggerWord(entry)"></ion-input>
+                        <ion-button fill="clear" (click)="addTriggerWord(entry)">
+                          <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+                        </ion-button>
+                      </div>
+                      <div class="tags-list">
+                        @for (tw of entry.triggerWords; track tw) {
+                          <ion-chip (click)="removeTriggerWord(entry, tw)">
+                            {{ tw }} <ion-icon name="close-outline"></ion-icon>
+                          </ion-chip>
+                        }
+                      </div>
+                    </div>
+                    <!-- Linked Entries -->
+                    <div class="form-field">
+                      <label>Linked Lore Entries</label>
+                      <div class="linked-items">
+                        @for (linkedId of entry.linkedLoreEntryIds; track linkedId) {
+                          <div class="linked-item">
+                            <ion-icon name="link-outline"></ion-icon>
+                            <span>{{ getEntryTitle(linkedId) }}</span>
+                            <ion-button fill="clear" size="small" color="danger" (click)="unlinkEntry(entry, linkedId)">
+                              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+                            </ion-button>
+                          </div>
+                        }
+                      </div>
+                      <ion-button fill="clear" size="small" (click)="showLinkEntryPicker(entry)">
+                        <ion-icon slot="start" name="add-outline"></ion-icon>
+                        Link Entry
+                      </ion-button>
+                    </div>
+                    <!-- Linked Characters -->
+                    <div class="form-field">
+                      <label>Linked Characters</label>
+                      <div class="linked-items">
+                        @for (charId of entry.linkedCharacterIds; track charId) {
+                          <div class="linked-item">
+                            <ion-icon name="people-outline"></ion-icon>
+                            <span>{{ getCharacterName(charId) }}</span>
+                            <ion-button fill="clear" size="small" color="danger" (click)="unlinkCharacter(entry, charId)">
+                              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+                            </ion-button>
+                          </div>
+                        }
+                      </div>
+                      <ion-button fill="clear" size="small" (click)="showLinkCharacterPicker(entry)">
+                        <ion-icon slot="start" name="add-outline"></ion-icon>
+                        Link Character
+                      </ion-button>
+                    </div>
+                    <!-- Advanced Settings -->
+                    <div class="advanced-section">
+                      <div class="mb-section-header">
+                        <span class="mb-section-title">Advanced</span>
+                      </div>
+                      <div class="advanced-grid">
+                        <div class="form-field">
+                          <label>Insertion Position</label>
+                          <select [(ngModel)]="entry.insertionPosition" class="native-select">
+                            <option value="before-context">Before Context</option>
+                            <option value="after-context">After Context</option>
+                            <option value="in-context">In Context</option>
+                          </select>
+                        </div>
+                        <div class="form-field">
+                          <label>Scan Depth</label>
+                          <ion-input type="number" [(ngModel)]="entry.scanDepth" class="mb-input"></ion-input>
+                        </div>
+                        <div class="form-field">
+                          <label>Probability (%)</label>
+                          <ion-input type="number" [ngModel]="entry.probability * 100"
+                            (ngModelChange)="entry.probability = $event / 100"
+                          min="0" max="100" class="mb-input"></ion-input>
+                        </div>
+                      </div>
+                      <ion-item lines="none" class="toggle-item">
+                        <ion-label>Recursive</ion-label>
+                        <ion-toggle [(ngModel)]="entry.isRecursive" slot="end"></ion-toggle>
+                      </ion-item>
+                      <ion-item lines="none" class="toggle-item">
+                        <ion-label>Enabled</ion-label>
+                        <ion-toggle [(ngModel)]="entry.isEnabled" slot="end"></ion-toggle>
+                      </ion-item>
+                    </div>
+                    <!-- Entry Actions -->
+                    <div class="entry-footer">
+                      <ion-button fill="clear" color="danger" size="small" (click)="confirmDeleteEntry(entry)">
+                        <ion-icon slot="start" name="trash-outline"></ion-icon>
+                        Delete Entry
+                      </ion-button>
+                      <ion-button class="mb-btn-primary" size="small" (click)="saveEntry(entry)">
+                        <ion-icon slot="start" name="save-outline"></ion-icon>
+                        Save Entry
                       </ion-button>
                     </div>
                   </div>
-                  <ion-button fill="clear" size="small" (click)="showLinkCharacterPicker(entry)">
-                    <ion-icon slot="start" name="add-outline"></ion-icon>
-                    Link Character
-                  </ion-button>
-                </div>
-
-                <!-- Advanced Settings -->
-                <div class="advanced-section">
-                  <div class="mb-section-header">
-                    <span class="mb-section-title">Advanced</span>
-                  </div>
-                  <div class="advanced-grid">
-                    <div class="form-field">
-                      <label>Insertion Position</label>
-                      <select [(ngModel)]="entry.insertionPosition" class="native-select">
-                        <option value="before-context">Before Context</option>
-                        <option value="after-context">After Context</option>
-                        <option value="in-context">In Context</option>
-                      </select>
-                    </div>
-                    <div class="form-field">
-                      <label>Scan Depth</label>
-                      <ion-input type="number" [(ngModel)]="entry.scanDepth" class="mb-input"></ion-input>
-                    </div>
-                    <div class="form-field">
-                      <label>Probability (%)</label>
-                      <ion-input type="number" [ngModel]="entry.probability * 100"
-                                 (ngModelChange)="entry.probability = $event / 100"
-                                 min="0" max="100" class="mb-input"></ion-input>
-                    </div>
-                  </div>
-                  <ion-item lines="none" class="toggle-item">
-                    <ion-label>Recursive</ion-label>
-                    <ion-toggle [(ngModel)]="entry.isRecursive" slot="end"></ion-toggle>
-                  </ion-item>
-                  <ion-item lines="none" class="toggle-item">
-                    <ion-label>Enabled</ion-label>
-                    <ion-toggle [(ngModel)]="entry.isEnabled" slot="end"></ion-toggle>
-                  </ion-item>
-                </div>
-
-                <!-- Entry Actions -->
-                <div class="entry-footer">
-                  <ion-button fill="clear" color="danger" size="small" (click)="confirmDeleteEntry(entry)">
-                    <ion-icon slot="start" name="trash-outline"></ion-icon>
-                    Delete Entry
-                  </ion-button>
-                  <ion-button class="mb-btn-primary" size="small" (click)="saveEntry(entry)">
-                    <ion-icon slot="start" name="save-outline"></ion-icon>
-                    Save Entry
-                  </ion-button>
-                </div>
+                }
               </div>
-            </div>
+            }
           </div>
         </div>
-
+    
         <!-- Save Lorebook -->
         <ion-button expand="block" class="mb-btn-primary save-btn" (click)="saveLorebook()">
           <ion-icon slot="start" name="save-outline"></ion-icon>
@@ -247,7 +263,7 @@ import { Character } from '../../../core/models/character.model';
         </ion-button>
       </div>
     </ion-content>
-  `,
+    `,
   styles: [`
     .editor-form { max-width: 700px; margin: 0 auto; }
 
@@ -349,11 +365,22 @@ import { Character } from '../../../core/models/character.model';
     }
   `],
   imports: [
-    CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonInput, IonTextarea, IonBackButton, IonButtons, IonChip,
-    IonLabel, IonItem, IonToggle
-  ],
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonButton,
+    IonIcon,
+    IonInput,
+    IonTextarea,
+    IonBackButton,
+    IonButtons,
+    IonChip,
+    IonLabel,
+    IonItem,
+    IonToggle
+],
 })
 export class LorebookEditorPage implements OnInit {
   lorebook: Partial<Lorebook> = createDefaultLorebook();

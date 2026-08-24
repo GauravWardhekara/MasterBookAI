@@ -47,169 +47,209 @@ import { MemoryService } from '../../core/services/memory.service';
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
-
+    
       <!-- Connection indicator -->
-      <ion-toolbar class="connection-bar" *ngIf="connectionProfile">
-        <div class="connection-indicator">
-          <div class="conn-dot" [class.connected]="!!connectionProfile"></div>
-          <span class="conn-label">{{ connectionProfile.name }}</span>
-          <span class="conn-model" *ngIf="activeModel">{{ activeModel }}</span>
-          <span class="memory-indicator" *ngIf="injectedMemoryCount > 0">
-            <ion-icon name="bulb-outline"></ion-icon>
-            {{ injectedMemoryCount }} memories
-          </span>
-        </div>
-      </ion-toolbar>
+      @if (connectionProfile) {
+        <ion-toolbar class="connection-bar">
+          <div class="connection-indicator">
+            <div class="conn-dot" [class.connected]="!!connectionProfile"></div>
+            <span class="conn-label">{{ connectionProfile.name }}</span>
+            @if (activeModel) {
+              <span class="conn-model">{{ activeModel }}</span>
+            }
+            @if (injectedMemoryCount > 0) {
+              <span class="memory-indicator">
+                <ion-icon name="bulb-outline"></ion-icon>
+                {{ injectedMemoryCount }} memories
+              </span>
+            }
+          </div>
+        </ion-toolbar>
+      }
     </ion-header>
-
+    
     <ion-content #chatContent class="chat-content">
       <div class="chat-container">
         <!-- No connection warning -->
-        <div *ngIf="!connectionProfile" class="no-connection-banner mb-fade-in">
-          <ion-icon name="settings-outline"></ion-icon>
-          <span>No LLM connection configured.</span>
-          <ion-button fill="clear" size="small" (click)="goToSettings()">
-            <ion-icon slot="start" name="settings-outline"></ion-icon>
-            Set Up Connection
-          </ion-button>
-        </div>
-
-        <!-- Session not found -->
-        <div *ngIf="!session" class="mb-empty-state">
-          <h3>Session Not Found</h3>
-          <p>This chat session may have been deleted</p>
-        </div>
-
-        <!-- Messages area -->
-        <div *ngIf="session" class="messages-area">
-          <!-- Scenario header card -->
-          <div class="scenario-header mb-glass-card mb-fade-in" *ngIf="scenario">
-            <div class="sc-header-icon">{{ scenario.defaultMode === 'chat' ? '💬' : '📖' }}</div>
-            <div class="sc-header-info">
-              <div class="sc-header-title">{{ scenario.title }}</div>
-              <div class="sc-header-meta">
-                {{ activeCharacters.length }} character{{ activeCharacters.length !== 1 ? 's' : '' }}
-                · {{ scenario.defaultMode | titlecase }} mode
-              </div>
-            </div>
-          </div>
-
-          <!-- Greeting message (if no messages yet) -->
-          <div *ngIf="session.messages.length === 0 && greeting" class="greeting-card mb-fade-in">
-            <div class="greeting-avatar">
-              <div *ngIf="activeCharacters[0]?.avatar" class="msg-avatar">
-                <img [src]="activeCharacters[0].avatar" alt="" />
-              </div>
-              <div *ngIf="!activeCharacters[0]?.avatar" class="msg-avatar placeholder-avatar">
-                {{ (activeCharacters[0]?.name || '?').charAt(0) }}
-              </div>
-            </div>
-            <div class="greeting-content">
-              <div class="greeting-name">{{ activeCharacters[0]?.name || 'AI' }}</div>
-              <div class="greeting-text">{{ greeting }}</div>
-            </div>
-            <ion-button fill="clear" size="small" class="use-greeting-btn" (click)="useGreeting()">
-              Use as first message
+        @if (!connectionProfile) {
+          <div class="no-connection-banner mb-fade-in">
+            <ion-icon name="settings-outline"></ion-icon>
+            <span>No LLM connection configured.</span>
+            <ion-button fill="clear" size="small" (click)="goToSettings()">
+              <ion-icon slot="start" name="settings-outline"></ion-icon>
+              Set Up Connection
             </ion-button>
           </div>
-
-          <!-- Message Bubbles -->
-          <div *ngFor="let msg of session.messages; let i = index; trackBy: trackByMsgId"
-               class="message-row mb-fade-in"
-               [class.user-msg]="msg.role === 'user'"
-               [class.assistant-msg]="msg.role === 'assistant'"
-               [class.system-msg]="msg.role === 'system' || msg.role === 'narrator'">
-
-            <!-- Avatar (assistant/system only) -->
-            <div class="msg-avatar-col" *ngIf="msg.role !== 'user'">
-              <div *ngIf="getCharacterAvatar(msg.senderId)" class="msg-avatar">
-                <img [src]="getCharacterAvatar(msg.senderId)" alt="" />
-              </div>
-              <div *ngIf="!getCharacterAvatar(msg.senderId)" class="msg-avatar placeholder-avatar">
-                {{ (msg.senderName || '?').charAt(0) }}
-              </div>
-            </div>
-
-            <div class="msg-bubble-col" [class.right]="msg.role === 'user'">
-              <div class="msg-sender" *ngIf="msg.role !== 'user'">{{ msg.senderName }}</div>
-              <div class="msg-bubble" [class.user-bubble]="msg.role === 'user'"
-                   [class.ai-bubble]="msg.role === 'assistant'"
-                   [class.sys-bubble]="msg.role === 'system' || msg.role === 'narrator'">
-                <div class="msg-text" [innerHTML]="formatMessage(msg.content)"></div>
-                <div *ngIf="msg.generatedImageRefs && msg.generatedImageRefs.length > 0" class="msg-images">
-                  <img *ngFor="let imgUrl of msg.generatedImageRefs" [src]="imgUrl" alt="Generated" class="msg-gen-image" />
+        }
+    
+        <!-- Session not found -->
+        @if (!session) {
+          <div class="mb-empty-state">
+            <h3>Session Not Found</h3>
+            <p>This chat session may have been deleted</p>
+          </div>
+        }
+    
+        <!-- Messages area -->
+        @if (session) {
+          <div class="messages-area">
+            <!-- Scenario header card -->
+            @if (scenario) {
+              <div class="scenario-header mb-glass-card mb-fade-in">
+                <div class="sc-header-icon">{{ scenario.defaultMode === 'chat' ? '💬' : '📖' }}</div>
+                <div class="sc-header-info">
+                  <div class="sc-header-title">{{ scenario.title }}</div>
+                  <div class="sc-header-meta">
+                    {{ activeCharacters.length }} character{{ activeCharacters.length !== 1 ? 's' : '' }}
+                    · {{ scenario.defaultMode | titlecase }} mode
+                  </div>
                 </div>
               </div>
-              <div class="msg-meta">
-                <span class="msg-time">{{ formatTime(msg.timestamp) }}</span>
-                <div class="msg-actions" *ngIf="!isStreaming">
-                  <ion-button fill="clear" size="small" (click)="copyMessage(msg)">
-                    <ion-icon slot="icon-only" name="copy-outline"></ion-icon>
-                  </ion-button>
-                  <ion-button fill="clear" size="small" (click)="pinAsMemory(msg)" title="Pin as Memory"
-                              [color]="msg.isPinnedAsMemory ? 'warning' : undefined">
-                    <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
-                  </ion-button>
-                  <ion-button fill="clear" size="small" (click)="openImageGen(msg)" title="Generate Image">
-                    <ion-icon slot="icon-only" name="image-outline"></ion-icon>
-                  </ion-button>
-                  <ion-button *ngIf="msg.role === 'assistant' && i === session!.messages.length - 1"
-                              fill="clear" size="small" (click)="regenerateMessage(msg, i)">
-                    <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
-                  </ion-button>
-                  <ion-button fill="clear" size="small" color="danger" (click)="deleteMessage(i)">
-                    <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-                  </ion-button>
+            }
+            <!-- Greeting message (if no messages yet) -->
+            @if (session.messages.length === 0 && greeting) {
+              <div class="greeting-card mb-fade-in">
+                <div class="greeting-avatar">
+                  @if (activeCharacters[0]?.avatar) {
+                    <div class="msg-avatar">
+                      <img [src]="activeCharacters[0].avatar" alt="" />
+                    </div>
+                  }
+                  @if (!activeCharacters[0]?.avatar) {
+                    <div class="msg-avatar placeholder-avatar">
+                      {{ (activeCharacters[0]?.name || '?').charAt(0) }}
+                    </div>
+                  }
+                </div>
+                <div class="greeting-content">
+                  <div class="greeting-name">{{ activeCharacters[0]?.name || 'AI' }}</div>
+                  <div class="greeting-text">{{ greeting }}</div>
+                </div>
+                <ion-button fill="clear" size="small" class="use-greeting-btn" (click)="useGreeting()">
+                  Use as first message
+                </ion-button>
+              </div>
+            }
+            <!-- Message Bubbles -->
+            @for (msg of session.messages; track trackByMsgId(i, msg); let i = $index) {
+              <div
+                class="message-row mb-fade-in"
+                [class.user-msg]="msg.role === 'user'"
+                [class.assistant-msg]="msg.role === 'assistant'"
+                [class.system-msg]="msg.role === 'system' || msg.role === 'narrator'">
+                <!-- Avatar (assistant/system only) -->
+                @if (msg.role !== 'user') {
+                  <div class="msg-avatar-col">
+                    @if (getCharacterAvatar(msg.senderId)) {
+                      <div class="msg-avatar">
+                        <img [src]="getCharacterAvatar(msg.senderId)" alt="" />
+                      </div>
+                    }
+                    @if (!getCharacterAvatar(msg.senderId)) {
+                      <div class="msg-avatar placeholder-avatar">
+                        {{ (msg.senderName || '?').charAt(0) }}
+                      </div>
+                    }
+                  </div>
+                }
+                <div class="msg-bubble-col" [class.right]="msg.role === 'user'">
+                  @if (msg.role !== 'user') {
+                    <div class="msg-sender">{{ msg.senderName }}</div>
+                  }
+                  <div class="msg-bubble" [class.user-bubble]="msg.role === 'user'"
+                    [class.ai-bubble]="msg.role === 'assistant'"
+                    [class.sys-bubble]="msg.role === 'system' || msg.role === 'narrator'">
+                    <div class="msg-text" [innerHTML]="formatMessage(msg.content)"></div>
+                    @if (msg.generatedImageRefs && msg.generatedImageRefs.length > 0) {
+                      <div class="msg-images">
+                        @for (imgUrl of msg.generatedImageRefs; track imgUrl) {
+                          <img [src]="imgUrl" alt="Generated" class="msg-gen-image" />
+                        }
+                      </div>
+                    }
+                  </div>
+                  <div class="msg-meta">
+                    <span class="msg-time">{{ formatTime(msg.timestamp) }}</span>
+                    @if (!isStreaming) {
+                      <div class="msg-actions">
+                        <ion-button fill="clear" size="small" (click)="copyMessage(msg)">
+                          <ion-icon slot="icon-only" name="copy-outline"></ion-icon>
+                        </ion-button>
+                        <ion-button fill="clear" size="small" (click)="pinAsMemory(msg)" title="Pin as Memory"
+                          [color]="msg.isPinnedAsMemory ? 'warning' : undefined">
+                          <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
+                        </ion-button>
+                        <ion-button fill="clear" size="small" (click)="openImageGen(msg)" title="Generate Image">
+                          <ion-icon slot="icon-only" name="image-outline"></ion-icon>
+                        </ion-button>
+                        @if (msg.role === 'assistant' && i === session!.messages.length - 1) {
+                          <ion-button
+                            fill="clear" size="small" (click)="regenerateMessage(msg, i)">
+                            <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+                          </ion-button>
+                        }
+                        <ion-button fill="clear" size="small" color="danger" (click)="deleteMessage(i)">
+                          <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                        </ion-button>
+                      </div>
+                    }
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- Streaming indicator -->
-          <div *ngIf="isStreaming" class="message-row assistant-msg streaming-row mb-fade-in">
-            <div class="msg-avatar-col">
-              <div class="msg-avatar placeholder-avatar streaming-avatar">
-                <ion-icon name="sparkles-outline"></ion-icon>
+            }
+            <!-- Streaming indicator -->
+            @if (isStreaming) {
+              <div class="message-row assistant-msg streaming-row mb-fade-in">
+                <div class="msg-avatar-col">
+                  <div class="msg-avatar placeholder-avatar streaming-avatar">
+                    <ion-icon name="sparkles-outline"></ion-icon>
+                  </div>
+                </div>
+                <div class="msg-bubble-col">
+                  <div class="msg-sender">{{ streamingSenderName }}</div>
+                  <div class="msg-bubble ai-bubble">
+                    <div class="msg-text" [innerHTML]="formatMessage(streamingContent)"></div>
+                    <span class="typing-cursor">▊</span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="msg-bubble-col">
-              <div class="msg-sender">{{ streamingSenderName }}</div>
-              <div class="msg-bubble ai-bubble">
-                <div class="msg-text" [innerHTML]="formatMessage(streamingContent)"></div>
-                <span class="typing-cursor">▊</span>
-              </div>
-            </div>
+            }
+            <!-- Scroll anchor -->
+            <div #scrollAnchor></div>
           </div>
-
-          <!-- Scroll anchor -->
-          <div #scrollAnchor></div>
-        </div>
+        }
       </div>
     </ion-content>
-
-    <ion-footer *ngIf="session">
-      <ion-toolbar class="chat-input-toolbar">
-        <div class="chat-input-row">
-          <textarea #messageInput
-            class="chat-input"
-            [placeholder]="isStreaming ? 'AI is typing...' : 'Type a message...'"
-            [(ngModel)]="inputText"
-            (keydown)="onKeyDown($event)"
-            [disabled]="isStreaming"
-            rows="1"
-          ></textarea>
-          <ion-button *ngIf="!isStreaming" class="send-btn"
-                      [disabled]="!inputText.trim() || !connectionProfile"
-                      fill="clear" (click)="sendMessage()">
-            <ion-icon slot="icon-only" name="send-outline"></ion-icon>
-          </ion-button>
-          <ion-button *ngIf="isStreaming" class="stop-btn" fill="clear" (click)="stopStreaming()">
-            <ion-icon slot="icon-only" name="stop-circle-outline"></ion-icon>
-          </ion-button>
-        </div>
-      </ion-toolbar>
-    </ion-footer>
-  `,
+    
+    @if (session) {
+      <ion-footer>
+        <ion-toolbar class="chat-input-toolbar">
+          <div class="chat-input-row">
+            <textarea #messageInput
+              class="chat-input"
+              [placeholder]="isStreaming ? 'AI is typing...' : 'Type a message...'"
+              [(ngModel)]="inputText"
+              (keydown)="onKeyDown($event)"
+              [disabled]="isStreaming"
+              rows="1"
+            ></textarea>
+            @if (!isStreaming) {
+              <ion-button class="send-btn"
+                [disabled]="!inputText.trim() || !connectionProfile"
+                fill="clear" (click)="sendMessage()">
+                <ion-icon slot="icon-only" name="send-outline"></ion-icon>
+              </ion-button>
+            }
+            @if (isStreaming) {
+              <ion-button class="stop-btn" fill="clear" (click)="stopStreaming()">
+                <ion-icon slot="icon-only" name="stop-circle-outline"></ion-icon>
+              </ion-button>
+            }
+          </div>
+        </ion-toolbar>
+      </ion-footer>
+    }
+    `,
   styles: [`
     .chat-content { --background: var(--mb-bg-deep); }
 

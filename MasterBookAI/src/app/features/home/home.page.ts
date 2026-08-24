@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon
@@ -312,8 +312,13 @@ import { MemoryService } from '../../core/services/memory.service';
     }
   `],
   imports: [
-    CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon
-  ],
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonButton,
+    IonIcon
+],
 })
 export class HomePage implements OnInit {
   scenarioCount = 0;

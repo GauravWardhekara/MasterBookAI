@@ -44,17 +44,21 @@ import { HubModel, ModelFile, DeviceCapabilities, LocalModel } from '../../core/
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
-
+    
       <!-- Device Info Banner -->
-      <div class="device-banner" *ngIf="deviceCaps">
-        <ion-icon [name]="getPlatformIcon()"></ion-icon>
-        <span class="device-info">
-          {{ deviceCaps.os }} • {{ deviceCaps.ramGB }} GB RAM
-          <span *ngIf="deviceCaps.hasWebGPU"> • WebGPU</span>
-        </span>
-        <ion-badge [color]="getTierColor()" class="tier-badge">{{ deviceCaps.tier | uppercase }}</ion-badge>
-      </div>
-
+      @if (deviceCaps) {
+        <div class="device-banner">
+          <ion-icon [name]="getPlatformIcon()"></ion-icon>
+          <span class="device-info">
+            {{ deviceCaps.os }} • {{ deviceCaps.ramGB }} GB RAM
+            @if (deviceCaps.hasWebGPU) {
+              <span> • WebGPU</span>
+            }
+          </span>
+          <ion-badge [color]="getTierColor()" class="tier-badge">{{ deviceCaps.tier | uppercase }}</ion-badge>
+        </div>
+      }
+    
       <!-- Tabs -->
       <ion-segment [(ngModel)]="activeTab" (ionChange)="onTabChange()" class="mh-segment">
         <ion-segment-button value="local">
@@ -71,72 +75,81 @@ import { HubModel, ModelFile, DeviceCapabilities, LocalModel } from '../../core/
         </ion-segment-button>
       </ion-segment>
     </ion-header>
-
+    
     <ion-content class="mh-content">
       <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
-
+    
       <div class="mh-container ion-padding">
-
+    
         <!-- Search Bar (for HuggingFace & Ollama) -->
-        <div *ngIf="activeTab === 'huggingface'" class="search-wrapper">
-          <ion-searchbar
-            [(ngModel)]="searchQuery"
-            placeholder="Search GGUF models..."
-            (ionInput)="onSearchInput($event)"
-            class="mh-searchbar"
-            debounce="500">
-          </ion-searchbar>
-        </div>
-
-        <!-- Loading Spinner -->
-        <div class="loading-state" *ngIf="isLoading">
-          <ion-spinner name="crescent" color="warning"></ion-spinner>
-          <span>Loading models...</span>
-        </div>
-
-        <!-- ═══ LOCAL TAB ═══ -->
-        <ng-container *ngIf="activeTab === 'local' && !isLoading">
-          <div class="empty-state" *ngIf="localModels.length === 0">
-            <ion-icon name="hardware-chip-outline" class="empty-icon"></ion-icon>
-            <h3>No Local Models</h3>
-            <p>Download models from the Ollama or HuggingFace tabs to get started.</p>
+        @if (activeTab === 'huggingface') {
+          <div class="search-wrapper">
+            <ion-searchbar
+              [(ngModel)]="searchQuery"
+              placeholder="Search GGUF models..."
+              (ionInput)="onSearchInput($event)"
+              class="mh-searchbar"
+              debounce="500">
+            </ion-searchbar>
           </div>
-
-          <div class="model-card" *ngFor="let model of localModels">
-            <div class="card-top">
-              <div class="card-info">
-                <div class="model-name">{{ model.name }}</div>
-                <div class="model-meta">
-                  {{ model.source }} • {{ formatBytes(model.sizeBytes) }}
-                  <span *ngIf="model.quantType"> • {{ model.quantType }}</span>
+        }
+    
+        <!-- Loading Spinner -->
+        @if (isLoading) {
+          <div class="loading-state">
+            <ion-spinner name="crescent" color="warning"></ion-spinner>
+            <span>Loading models...</span>
+          </div>
+        }
+    
+        <!-- ═══ LOCAL TAB ═══ -->
+        @if (activeTab === 'local' && !isLoading) {
+          @if (localModels.length === 0) {
+            <div class="empty-state">
+              <ion-icon name="hardware-chip-outline" class="empty-icon"></ion-icon>
+              <h3>No Local Models</h3>
+              <p>Download models from the Ollama or HuggingFace tabs to get started.</p>
+            </div>
+          }
+          @for (model of localModels; track model) {
+            <div class="model-card">
+              <div class="card-top">
+                <div class="card-info">
+                  <div class="model-name">{{ model.name }}</div>
+                  <div class="model-meta">
+                    {{ model.source }} • {{ formatBytes(model.sizeBytes) }}
+                    @if (model.quantType) {
+                      <span> • {{ model.quantType }}</span>
+                    }
+                  </div>
+                </div>
+                <div class="status-badge" [ngClass]="'status-' + model.status">
+                  <ion-icon [name]="getStatusIcon(model.status)"></ion-icon>
+                  {{ model.status }}
                 </div>
               </div>
-              <div class="status-badge" [ngClass]="'status-' + model.status">
-                <ion-icon [name]="getStatusIcon(model.status)"></ion-icon>
-                {{ model.status }}
+              <!-- Download progress -->
+              @if (model.status === 'downloading') {
+                <div class="progress-bar-wrapper">
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="model.downloadProgress"></div>
+                  </div>
+                  <span class="progress-text">{{ model.downloadProgress }}%</span>
+                </div>
+              }
+              <div class="card-actions">
+                <ion-button fill="clear" size="small" color="danger" (click)="deleteLocalModel(model)">
+                  <ion-icon slot="start" name="trash-outline"></ion-icon> Delete
+                </ion-button>
               </div>
             </div>
-
-            <!-- Download progress -->
-            <div class="progress-bar-wrapper" *ngIf="model.status === 'downloading'">
-              <div class="progress-bar">
-                <div class="progress-fill" [style.width.%]="model.downloadProgress"></div>
-              </div>
-              <span class="progress-text">{{ model.downloadProgress }}%</span>
-            </div>
-
-            <div class="card-actions">
-              <ion-button fill="clear" size="small" color="danger" (click)="deleteLocalModel(model)">
-                <ion-icon slot="start" name="trash-outline"></ion-icon> Delete
-              </ion-button>
-            </div>
-          </div>
-        </ng-container>
-
+          }
+        }
+    
         <!-- ═══ OLLAMA TAB ═══ -->
-        <ng-container *ngIf="activeTab === 'ollama' && !isLoading">
+        @if (activeTab === 'ollama' && !isLoading) {
           <!-- Ollama Pull Input -->
           <div class="pull-section">
             <div class="pull-header">Pull a model from Ollama</div>
@@ -152,110 +165,136 @@ import { HubModel, ModelFile, DeviceCapabilities, LocalModel } from '../../core/
               </ion-button>
             </div>
             <!-- Pull progress -->
-            <div class="pull-progress" *ngIf="isPulling">
-              <div class="progress-bar">
-                <div class="progress-fill animated" [style.width.%]="pullProgress"></div>
+            @if (isPulling) {
+              <div class="pull-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill animated" [style.width.%]="pullProgress"></div>
+                </div>
+                <span class="progress-text">{{ pullStatus }}</span>
               </div>
-              <span class="progress-text">{{ pullStatus }}</span>
-            </div>
+            }
           </div>
-
           <div class="section-divider">
             <span>Installed Models</span>
           </div>
-
-          <div class="empty-state" *ngIf="ollamaModels.length === 0">
-            <ion-icon name="server-outline" class="empty-icon"></ion-icon>
-            <h3>No Ollama Models</h3>
-            <p>Make sure Ollama is running, then pull a model above.</p>
-          </div>
-
-          <div class="model-card" *ngFor="let model of ollamaModels">
-            <div class="card-top">
-              <div class="card-info">
-                <div class="model-name">{{ model.name }}</div>
-                <div class="model-meta">
-                  {{ model.description }}
-                  <span *ngIf="model.parameterCount"> • {{ model.parameterCount }}</span>
+          @if (ollamaModels.length === 0) {
+            <div class="empty-state">
+              <ion-icon name="server-outline" class="empty-icon"></ion-icon>
+              <h3>No Ollama Models</h3>
+              <p>Make sure Ollama is running, then pull a model above.</p>
+            </div>
+          }
+          @for (model of ollamaModels; track model) {
+            <div class="model-card">
+              <div class="card-top">
+                <div class="card-info">
+                  <div class="model-name">{{ model.name }}</div>
+                  <div class="model-meta">
+                    {{ model.description }}
+                    @if (model.parameterCount) {
+                      <span> • {{ model.parameterCount }}</span>
+                    }
+                  </div>
                 </div>
+                <ion-icon name="checkmark-circle-outline" color="success" class="installed-icon"></ion-icon>
               </div>
-              <ion-icon name="checkmark-circle-outline" color="success" class="installed-icon"></ion-icon>
+              <div class="card-tags">
+                @for (t of model.tags; track t) {
+                  <span class="tag">{{ t }}</span>
+                }
+              </div>
+              <div class="card-actions">
+                <ion-button fill="clear" size="small" color="danger" (click)="deleteOllamaModel(model)">
+                  <ion-icon slot="start" name="trash-outline"></ion-icon> Remove
+                </ion-button>
+              </div>
             </div>
-            <div class="card-tags">
-              <span class="tag" *ngFor="let t of model.tags">{{ t }}</span>
-            </div>
-            <div class="card-actions">
-              <ion-button fill="clear" size="small" color="danger" (click)="deleteOllamaModel(model)">
-                <ion-icon slot="start" name="trash-outline"></ion-icon> Remove
-              </ion-button>
-            </div>
-          </div>
-        </ng-container>
-
+          }
+        }
+    
         <!-- ═══ HUGGINGFACE TAB ═══ -->
-        <ng-container *ngIf="activeTab === 'huggingface' && !isLoading">
-          <div class="empty-state" *ngIf="hfModels.length === 0 && !searchQuery">
-            <ion-icon name="search-outline" class="empty-icon"></ion-icon>
-            <h3>Search HuggingFace</h3>
-            <p>Search for GGUF models compatible with your device.</p>
-          </div>
-
-          <div class="empty-state" *ngIf="hfModels.length === 0 && searchQuery">
-            <h3>No Results</h3>
-            <p>No compatible GGUF models found for "{{ searchQuery }}".</p>
-          </div>
-
-          <div class="model-card" *ngFor="let model of hfModels">
-            <div class="card-top">
-              <div class="card-info">
-                <div class="model-name">{{ model.name }}</div>
-                <div class="model-meta">
-                  {{ model.id }}
-                  <span *ngIf="model.parameterCount"> • {{ model.parameterCount }}</span>
+        @if (activeTab === 'huggingface' && !isLoading) {
+          @if (hfModels.length === 0 && !searchQuery) {
+            <div class="empty-state">
+              <ion-icon name="search-outline" class="empty-icon"></ion-icon>
+              <h3>Search HuggingFace</h3>
+              <p>Search for GGUF models compatible with your device.</p>
+            </div>
+          }
+          @if (hfModels.length === 0 && searchQuery) {
+            <div class="empty-state">
+              <h3>No Results</h3>
+              <p>No compatible GGUF models found for "{{ searchQuery }}".</p>
+            </div>
+          }
+          @for (model of hfModels; track model) {
+            <div class="model-card">
+              <div class="card-top">
+                <div class="card-info">
+                  <div class="model-name">{{ model.name }}</div>
+                  <div class="model-meta">
+                    {{ model.id }}
+                    @if (model.parameterCount) {
+                      <span> • {{ model.parameterCount }}</span>
+                    }
+                  </div>
                 </div>
+                <ion-icon name="information-circle-outline" class="info-icon"></ion-icon>
               </div>
-              <ion-icon name="information-circle-outline" class="info-icon"></ion-icon>
+              @if (model.downloads || model.likes) {
+                <div class="card-stats">
+                  @if (model.downloads) {
+                    <span>{{ formatNumber(model.downloads!) }} downloads</span>
+                  }
+                  @if (model.likes) {
+                    <span> • {{ model.likes }} likes</span>
+                  }
+                </div>
+              }
+              <div class="card-tags">
+                @for (t of model.tags.slice(0, 5); track t) {
+                  <span class="tag">{{ t }}</span>
+                }
+              </div>
+              <div class="card-actions">
+                <ion-button fill="solid" size="small" color="warning" (click)="viewHFModelFiles(model)">
+                  <ion-icon slot="start" name="download-outline"></ion-icon> View Files
+                </ion-button>
+              </div>
             </div>
-            <div class="card-stats" *ngIf="model.downloads || model.likes">
-              <span *ngIf="model.downloads">{{ formatNumber(model.downloads!) }} downloads</span>
-              <span *ngIf="model.likes"> • {{ model.likes }} likes</span>
-            </div>
-            <div class="card-tags">
-              <span class="tag" *ngFor="let t of model.tags?.slice(0, 5)">{{ t }}</span>
-            </div>
-            <div class="card-actions">
-              <ion-button fill="solid" size="small" color="warning" (click)="viewHFModelFiles(model)">
-                <ion-icon slot="start" name="download-outline"></ion-icon> View Files
-              </ion-button>
-            </div>
-          </div>
-        </ng-container>
-
+          }
+        }
+    
         <!-- ═══ CLOUD TAB ═══ -->
-        <ng-container *ngIf="activeTab === 'cloud' && !isLoading">
-          <div class="empty-state" *ngIf="cloudModels.length === 0">
-            <ion-icon name="cloud-outline" class="empty-icon"></ion-icon>
-            <h3>No Cloud Models</h3>
-            <p>Configure cloud providers in Settings → Connections.</p>
-          </div>
-
-          <div class="model-card" *ngFor="let model of cloudModels">
-            <div class="card-top">
-              <div class="card-info">
-                <div class="model-name">{{ model.name }}</div>
-                <div class="model-meta">{{ model.description }}</div>
+        @if (activeTab === 'cloud' && !isLoading) {
+          @if (cloudModels.length === 0) {
+            <div class="empty-state">
+              <ion-icon name="cloud-outline" class="empty-icon"></ion-icon>
+              <h3>No Cloud Models</h3>
+              <p>Configure cloud providers in Settings → Connections.</p>
+            </div>
+          }
+          @for (model of cloudModels; track model) {
+            <div class="model-card">
+              <div class="card-top">
+                <div class="card-info">
+                  <div class="model-name">{{ model.name }}</div>
+                  <div class="model-meta">{{ model.description }}</div>
+                </div>
+                <ion-icon name="cloud-outline" class="cloud-icon"></ion-icon>
               </div>
-              <ion-icon name="cloud-outline" class="cloud-icon"></ion-icon>
+              <div class="card-tags">
+                @for (t of model.tags; track t) {
+                  <span class="tag cloud-tag">{{ t }}</span>
+                }
+              </div>
             </div>
-            <div class="card-tags">
-              <span class="tag cloud-tag" *ngFor="let t of model.tags">{{ t }}</span>
-            </div>
-          </div>
-        </ng-container>
-
+          }
+        }
+    
       </div>
     </ion-content>
-  `,
+    `,
   styles: [`
     .mh-header { background: #1c1c1e; }
     .transparent-toolbar { --background: transparent; color: white; }

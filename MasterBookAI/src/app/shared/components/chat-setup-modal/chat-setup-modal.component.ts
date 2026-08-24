@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton, IonIcon,
@@ -23,10 +23,16 @@ import { SamplingOverrides } from '../../../core/models/character.model';
   selector: 'app-chat-setup-modal',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton, IonIcon,
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonButtons,
+    IonButton,
+    IonIcon,
     IonToggle
-  ],
+],
   template: `
     <ion-header class="ion-no-border cs-header">
       <ion-toolbar class="transparent-toolbar">
@@ -38,22 +44,26 @@ import { SamplingOverrides } from '../../../core/models/character.model';
         <ion-title class="cs-title">Chat Settings</ion-title>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="cs-content ion-padding">
       <div class="cs-container">
-        
+    
         <!-- Settings List -->
         <div class="settings-group">
-          
+    
           <div class="setting-row" (click)="openModelSelection()">
             <div class="setting-label">Model</div>
             <div class="setting-value">
-              <span *ngIf="!selectedModel">Select</span>
-              <span *ngIf="selectedModel" class="value-text">{{ selectedModel }}</span>
+              @if (!selectedModel) {
+                <span>Select</span>
+              }
+              @if (selectedModel) {
+                <span class="value-text">{{ selectedModel }}</span>
+              }
               <ion-icon name="chevron-forward-outline"></ion-icon>
             </div>
           </div>
-
+    
           <div class="setting-row" (click)="openPresetManager()">
             <div class="setting-label">Parameters</div>
             <div class="setting-value">
@@ -61,7 +71,7 @@ import { SamplingOverrides } from '../../../core/models/character.model';
               <ion-icon name="chevron-forward-outline"></ion-icon>
             </div>
           </div>
-
+    
           <div class="setting-row" (click)="openSystemPrompt()">
             <div class="setting-label">System Prompt</div>
             <div class="setting-value">
@@ -69,9 +79,9 @@ import { SamplingOverrides } from '../../../core/models/character.model';
               <ion-icon name="chevron-forward-outline"></ion-icon>
             </div>
           </div>
-
+    
         </div>
-
+    
         <div class="settings-group mt-4">
           <div class="setting-row" (click)="openPresetManager()">
             <div class="setting-label">Preset</div>
@@ -81,7 +91,7 @@ import { SamplingOverrides } from '../../../core/models/character.model';
             </div>
           </div>
         </div>
-
+    
         <div class="settings-group mt-4">
           <div class="setting-row">
             <div class="setting-label">Memory</div>
@@ -90,10 +100,10 @@ import { SamplingOverrides } from '../../../core/models/character.model';
               <ion-icon name="chevron-forward-outline"></ion-icon>
             </div>
           </div>
-
+    
           <div class="setting-row no-active-click">
             <div class="setting-label">
-              Advanced Memory 
+              Advanced Memory
               <ion-icon name="help-circle-outline" class="help-icon"></ion-icon>
             </div>
             <div class="setting-value">
@@ -101,7 +111,7 @@ import { SamplingOverrides } from '../../../core/models/character.model';
             </div>
           </div>
         </div>
-
+    
         <div class="settings-group mt-4">
           <div class="setting-row">
             <div class="setting-label">Persona</div>
@@ -111,7 +121,7 @@ import { SamplingOverrides } from '../../../core/models/character.model';
               <ion-icon name="chevron-forward-outline"></ion-icon>
             </div>
           </div>
-
+    
           <div class="setting-row">
             <div class="setting-label">Scenario</div>
             <div class="setting-value">
@@ -119,7 +129,7 @@ import { SamplingOverrides } from '../../../core/models/character.model';
               <ion-icon name="chevron-forward-outline"></ion-icon>
             </div>
           </div>
-
+    
           <div class="setting-row">
             <div class="setting-label">
               Lorebooks
@@ -131,10 +141,10 @@ import { SamplingOverrides } from '../../../core/models/character.model';
             </div>
           </div>
         </div>
-
+    
       </div>
     </ion-content>
-
+    
     <!-- Bottom Action Bar -->
     <div class="bottom-tab-bar">
       <div class="tab-item">
@@ -154,7 +164,7 @@ import { SamplingOverrides } from '../../../core/models/character.model';
         <span>More</span>
       </div>
     </div>
-  `,
+    `,
   styles: [`
     .cs-header { background: #1c1c1e; }
     .transparent-toolbar { --background: transparent; color: white; }

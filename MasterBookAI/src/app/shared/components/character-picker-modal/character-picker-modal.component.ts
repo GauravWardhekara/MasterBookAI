@@ -36,98 +36,112 @@ import { Router } from '@angular/router';
         ></ion-searchbar>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="picker-content">
       <!-- Empty state: no characters exist at all -->
-      <div *ngIf="allCharacters.length === 0" class="picker-empty">
-        <div class="picker-empty-icon">👤</div>
-        <h3>No Characters Yet</h3>
-        <p>Create your first character, then come back to add it here.</p>
-        <ion-button class="mb-btn-primary" (click)="createNewCharacter()">
-          <ion-icon slot="start" name="add-outline"></ion-icon>
-          Create Character
+      @if (allCharacters.length === 0) {
+        <div class="picker-empty">
+          <div class="picker-empty-icon">👤</div>
+          <h3>No Characters Yet</h3>
+          <p>Create your first character, then come back to add it here.</p>
+          <ion-button class="mb-btn-primary" (click)="createNewCharacter()">
+            <ion-icon slot="start" name="add-outline"></ion-icon>
+            Create Character
+          </ion-button>
+        </div>
+      }
+    
+      <!-- Character cards -->
+      @if (allCharacters.length > 0) {
+        <div class="picker-grid">
+          <!-- Create New shortcut card -->
+          <div class="picker-card create-card" (click)="createNewCharacter()">
+            <div class="create-card-inner">
+              <ion-icon name="add-outline" class="create-icon"></ion-icon>
+              <span class="create-label">Create New Character</span>
+            </div>
+          </div>
+          @for (char of filteredCharacters; track trackById(i, char); let i = $index) {
+            <div
+              class="picker-card"
+              [class.selected]="isSelected(char.id)"
+              [class.disabled]="isExcluded(char.id)"
+              [style.animation-delay]="(i * 0.04) + 's'"
+              (click)="toggleSelect(char)"
+              >
+              <!-- Selection overlay -->
+              <div class="select-indicator">
+                <ion-icon
+                  [name]="isSelected(char.id) ? 'checkmark-circle' : 'checkmark-circle-outline'"
+                  class="select-icon"
+                  [class.checked]="isSelected(char.id)"
+                ></ion-icon>
+              </div>
+              <!-- Already-added badge -->
+              @if (isExcluded(char.id)) {
+                <div class="already-badge">
+                  Already Added
+                </div>
+              }
+              <!-- Avatar -->
+              <div class="picker-avatar-wrap">
+                @if (char.avatar) {
+                  <div class="picker-avatar">
+                    <img [src]="char.avatar" [alt]="char.name" />
+                  </div>
+                }
+                @if (!char.avatar) {
+                  <div class="picker-avatar picker-avatar-placeholder">
+                    {{ char.name.charAt(0).toUpperCase() }}
+                  </div>
+                }
+              </div>
+              <!-- Info -->
+              <div class="picker-info">
+                <div class="picker-name">{{ char.name }}</div>
+                <div class="picker-desc">
+                  {{ char.description | slice:0:80 }}{{ char.description.length > 80 ? '…' : '' }}
+                </div>
+                <div class="picker-tags">
+                  @if (char.isPlayable) {
+                    <span class="tag-badge playable-badge">Playable</span>
+                  }
+                  @for (tag of char.tags | slice:0:3; track tag) {
+                    <span class="tag-badge">{{ tag }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+          <!-- No results from search -->
+          @if (filteredCharacters.length === 0 && searchQuery.trim()) {
+            <div class="picker-no-results">
+              <ion-icon name="search-outline"></ion-icon>
+              <span>No characters match "{{ searchQuery }}"</span>
+            </div>
+          }
+        </div>
+      }
+    </ion-content>
+    
+    <!-- Sticky bottom bar -->
+    @if (allCharacters.length > 0) {
+      <div class="picker-footer">
+        <div class="footer-count">
+          <span class="count-number">{{ selectedIds.size }}</span>
+          <span class="count-label">selected</span>
+        </div>
+        <ion-button
+          class="confirm-btn"
+          [disabled]="selectedIds.size === 0"
+          (click)="confirm()"
+          >
+          <ion-icon slot="start" name="checkmark-circle-outline"></ion-icon>
+          Add {{ selectedIds.size > 0 ? selectedIds.size : '' }} Character{{ selectedIds.size !== 1 ? 's' : '' }}
         </ion-button>
       </div>
-
-      <!-- Character cards -->
-      <div *ngIf="allCharacters.length > 0" class="picker-grid">
-        <!-- Create New shortcut card -->
-        <div class="picker-card create-card" (click)="createNewCharacter()">
-          <div class="create-card-inner">
-            <ion-icon name="add-outline" class="create-icon"></ion-icon>
-            <span class="create-label">Create New Character</span>
-          </div>
-        </div>
-
-        <div
-          *ngFor="let char of filteredCharacters; let i = index; trackBy: trackById"
-          class="picker-card"
-          [class.selected]="isSelected(char.id)"
-          [class.disabled]="isExcluded(char.id)"
-          [style.animation-delay]="(i * 0.04) + 's'"
-          (click)="toggleSelect(char)"
-        >
-          <!-- Selection overlay -->
-          <div class="select-indicator">
-            <ion-icon
-              [name]="isSelected(char.id) ? 'checkmark-circle' : 'checkmark-circle-outline'"
-              class="select-icon"
-              [class.checked]="isSelected(char.id)"
-            ></ion-icon>
-          </div>
-
-          <!-- Already-added badge -->
-          <div *ngIf="isExcluded(char.id)" class="already-badge">
-            Already Added
-          </div>
-
-          <!-- Avatar -->
-          <div class="picker-avatar-wrap">
-            <div *ngIf="char.avatar" class="picker-avatar">
-              <img [src]="char.avatar" [alt]="char.name" />
-            </div>
-            <div *ngIf="!char.avatar" class="picker-avatar picker-avatar-placeholder">
-              {{ char.name.charAt(0).toUpperCase() }}
-            </div>
-          </div>
-
-          <!-- Info -->
-          <div class="picker-info">
-            <div class="picker-name">{{ char.name }}</div>
-            <div class="picker-desc">
-              {{ char.description | slice:0:80 }}{{ char.description.length > 80 ? '…' : '' }}
-            </div>
-            <div class="picker-tags">
-              <span *ngIf="char.isPlayable" class="tag-badge playable-badge">Playable</span>
-              <span *ngFor="let tag of char.tags | slice:0:3" class="tag-badge">{{ tag }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- No results from search -->
-        <div *ngIf="filteredCharacters.length === 0 && searchQuery.trim()" class="picker-no-results">
-          <ion-icon name="search-outline"></ion-icon>
-          <span>No characters match "{{ searchQuery }}"</span>
-        </div>
-      </div>
-    </ion-content>
-
-    <!-- Sticky bottom bar -->
-    <div class="picker-footer" *ngIf="allCharacters.length > 0">
-      <div class="footer-count">
-        <span class="count-number">{{ selectedIds.size }}</span>
-        <span class="count-label">selected</span>
-      </div>
-      <ion-button
-        class="confirm-btn"
-        [disabled]="selectedIds.size === 0"
-        (click)="confirm()"
-      >
-        <ion-icon slot="start" name="checkmark-circle-outline"></ion-icon>
-        Add {{ selectedIds.size > 0 ? selectedIds.size : '' }} Character{{ selectedIds.size !== 1 ? 's' : '' }}
-      </ion-button>
-    </div>
-  `,
+    }
+    `,
   styles: [`
     /* ═══════════════════════════════════════
        HEADER & SEARCH

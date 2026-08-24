@@ -38,14 +38,14 @@ interface SourceOption {
         <ion-title>Import Character Card</ion-title>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="import-content ion-padding">
-
+    
       <div class="import-hero">
         <div class="hero-icon">🌐</div>
         <p class="hero-desc">Enter the full URL of the character card to import, or pick a specific website.</p>
       </div>
-
+    
       <!-- Source Selector -->
       <ion-item class="mb-item source-item">
         <ion-label position="stacked">Source</ion-label>
@@ -55,53 +55,69 @@ interface SourceOption {
           (ionChange)="onSourceChange()"
           interface="action-sheet"
           [interfaceOptions]="{ header: 'Select Source' }">
-          <ion-select-option *ngFor="let s of sources" [value]="s.value">
-            {{ s.label }}
-          </ion-select-option>
+          @for (s of sources; track s) {
+            <ion-select-option [value]="s.value">
+              {{ s.label }}
+            </ion-select-option>
+          }
         </ion-select>
       </ion-item>
-
+    
       <!-- URL / ID Input -->
-      <ion-item class="mb-item input-item" *ngIf="currentSource">
-        <ion-label position="stacked">{{ currentSource.inputLabel }}</ion-label>
-        <ion-input
-          id="import-url-input"
-          [(ngModel)]="inputValue"
-          [placeholder]="currentSource.placeholder"
-          clearInput="true"
-          (keyup.enter)="importCharacter()"
-        ></ion-input>
-      </ion-item>
-
-      <div class="hint-text" *ngIf="currentSource?.hint">
-        {{ currentSource?.hint }}
-      </div>
-
+      @if (currentSource) {
+        <ion-item class="mb-item input-item">
+          <ion-label position="stacked">{{ currentSource.inputLabel }}</ion-label>
+          <ion-input
+            id="import-url-input"
+            [(ngModel)]="inputValue"
+            [placeholder]="currentSource.placeholder"
+            clearInput="true"
+            (keyup.enter)="importCharacter()"
+          ></ion-input>
+        </ion-item>
+      }
+    
+      @if (currentSource?.hint) {
+        <div class="hint-text">
+          {{ currentSource?.hint }}
+        </div>
+      }
+    
       <!-- Preview (shows after successful import) -->
-      <div class="preview-card" *ngIf="previewCharacter && !isLoading">
-        <div class="preview-avatar" *ngIf="previewCharacter.avatar">
-          <img [src]="previewCharacter.avatar" [alt]="previewCharacter.name">
-        </div>
-        <div class="preview-avatar placeholder" *ngIf="!previewCharacter.avatar">
-          {{ previewCharacter.name?.charAt(0)?.toUpperCase() }}
-        </div>
-        <div class="preview-info">
-          <div class="preview-name">{{ previewCharacter.name }}</div>
-          <div class="preview-desc">{{ previewCharacter.description | slice:0:120 }}{{ (previewCharacter.description?.length || 0) > 120 ? '...' : '' }}</div>
-          <div class="preview-tags">
-            <span class="mb-chip" *ngFor="let tag of (previewCharacter.tags || []) | slice:0:3">{{ tag }}</span>
+      @if (previewCharacter && !isLoading) {
+        <div class="preview-card">
+          @if (previewCharacter.avatar) {
+            <div class="preview-avatar">
+              <img [src]="previewCharacter.avatar" [alt]="previewCharacter.name">
+            </div>
+          }
+          @if (!previewCharacter.avatar) {
+            <div class="preview-avatar placeholder">
+              {{ previewCharacter.name?.charAt(0)?.toUpperCase() }}
+            </div>
+          }
+          <div class="preview-info">
+            <div class="preview-name">{{ previewCharacter.name }}</div>
+            <div class="preview-desc">{{ previewCharacter.description | slice:0:120 }}{{ (previewCharacter.description?.length || 0) > 120 ? '...' : '' }}</div>
+            <div class="preview-tags">
+              @for (tag of (previewCharacter.tags || []) | slice:0:3; track tag) {
+                <span class="mb-chip">{{ tag }}</span>
+              }
+            </div>
+          </div>
+          <div class="preview-check">
+            <ion-icon name="checkmark-circle-outline"></ion-icon>
           </div>
         </div>
-        <div class="preview-check">
-          <ion-icon name="checkmark-circle-outline"></ion-icon>
-        </div>
-      </div>
-
+      }
+    
       <!-- Error -->
-      <div class="error-card" *ngIf="errorMessage">
-        <p>❌ {{ errorMessage }}</p>
-      </div>
-
+      @if (errorMessage) {
+        <div class="error-card">
+          <p>❌ {{ errorMessage }}</p>
+        </div>
+      }
+    
       <!-- Footer -->
       <div class="import-footer">
         <ion-button
@@ -110,13 +126,17 @@ interface SourceOption {
           class="mb-btn-primary"
           (click)="importCharacter()"
           [disabled]="isLoading || !inputValue.trim()">
-          <ion-spinner *ngIf="isLoading" name="crescent" class="import-spinner"></ion-spinner>
-          <ion-icon *ngIf="!isLoading" slot="start" name="cloud-download-outline"></ion-icon>
+          @if (isLoading) {
+            <ion-spinner name="crescent" class="import-spinner"></ion-spinner>
+          }
+          @if (!isLoading) {
+            <ion-icon slot="start" name="cloud-download-outline"></ion-icon>
+          }
           {{ isLoading ? 'Importing...' : 'Import' }}
         </ion-button>
       </div>
     </ion-content>
-  `,
+    `,
   styles: [`
     .import-content { --background: var(--mb-bg-deep); }
 

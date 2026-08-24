@@ -39,57 +39,71 @@ import { CharacterImportModalComponent } from '../../../shared/components/charac
         ></ion-searchbar>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="ion-padding">
-      <div *ngIf="characters.length === 0" class="mb-empty-state">
-        <ion-icon name="person-outline"></ion-icon>
-        <h3>No Characters Yet</h3>
-        <p>Create your first character to use in scenarios and chats</p>
-        <ion-button class="mb-btn-primary" (click)="navigateTo('/characters/new')">
-          <ion-icon slot="start" name="add-outline"></ion-icon>
-          Create Character
-        </ion-button>
-      </div>
-
-      <div class="character-grid" *ngIf="characters.length > 0">
-        <div *ngFor="let char of characters; let i = index"
-             class="character-card mb-card mb-fade-in"
-             [style.animation-delay]="(i * 0.05) + 's'"
-             (click)="navigateTo('/characters/' + char.id + '/edit')">
-          <div class="char-avatar-wrap">
-            <div *ngIf="char.avatar" class="char-avatar">
-              <img [src]="char.avatar" [alt]="char.name" />
-            </div>
-            <div *ngIf="!char.avatar" class="char-avatar mb-avatar-placeholder">
-              {{ char.name.charAt(0).toUpperCase() }}
-            </div>
-          </div>
-          <div class="char-info">
-            <div class="char-name">{{ char.name }}</div>
-            <div class="char-desc">{{ char.description | slice:0:60 }}{{ char.description.length > 60 ? '...' : '' }}</div>
-            <div class="char-tags">
-              <span *ngIf="char.isPlayable" class="mb-badge mb-badge-premise">Playable</span>
-              <span *ngFor="let tag of char.tags | slice:0:2" class="mb-chip">{{ tag }}</span>
-            </div>
-          </div>
-          <div class="char-actions">
-            <ion-button fill="clear" size="small" (click)="editCharacter(char, $event)">
-              <ion-icon slot="icon-only" name="create-outline"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" size="small" color="danger" (click)="confirmDelete(char, $event)">
-              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-            </ion-button>
-          </div>
+      @if (characters.length === 0) {
+        <div class="mb-empty-state">
+          <ion-icon name="person-outline"></ion-icon>
+          <h3>No Characters Yet</h3>
+          <p>Create your first character to use in scenarios and chats</p>
+          <ion-button class="mb-btn-primary" (click)="navigateTo('/characters/new')">
+            <ion-icon slot="start" name="add-outline"></ion-icon>
+            Create Character
+          </ion-button>
         </div>
-      </div>
-
+      }
+    
+      @if (characters.length > 0) {
+        <div class="character-grid">
+          @for (char of characters; track char; let i = $index) {
+            <div
+              class="character-card mb-card mb-fade-in"
+              [style.animation-delay]="(i * 0.05) + 's'"
+              (click)="navigateTo('/characters/' + char.id + '/edit')">
+              <div class="char-avatar-wrap">
+                @if (char.avatar) {
+                  <div class="char-avatar">
+                    <img [src]="char.avatar" [alt]="char.name" />
+                  </div>
+                }
+                @if (!char.avatar) {
+                  <div class="char-avatar mb-avatar-placeholder">
+                    {{ char.name.charAt(0).toUpperCase() }}
+                  </div>
+                }
+              </div>
+              <div class="char-info">
+                <div class="char-name">{{ char.name }}</div>
+                <div class="char-desc">{{ char.description | slice:0:60 }}{{ char.description.length > 60 ? '...' : '' }}</div>
+                <div class="char-tags">
+                  @if (char.isPlayable) {
+                    <span class="mb-badge mb-badge-premise">Playable</span>
+                  }
+                  @for (tag of char.tags | slice:0:2; track tag) {
+                    <span class="mb-chip">{{ tag }}</span>
+                  }
+                </div>
+              </div>
+              <div class="char-actions">
+                <ion-button fill="clear" size="small" (click)="editCharacter(char, $event)">
+                  <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                </ion-button>
+                <ion-button fill="clear" size="small" color="danger" (click)="confirmDelete(char, $event)">
+                  <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                </ion-button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    
       <ion-fab slot="fixed" vertical="bottom" horizontal="end">
         <ion-fab-button (click)="navigateTo('/characters/new')">
           <ion-icon name="add-outline"></ion-icon>
         </ion-fab-button>
       </ion-fab>
     </ion-content>
-  `,
+    `,
   styles: [`
     .character-grid {
       display: flex;

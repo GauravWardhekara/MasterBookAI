@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -29,21 +29,25 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
         </ion-button>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="ion-padding">
       <div class="editor-form mb-fade-in">
         <!-- Avatar Upload -->
         <div class="avatar-section">
           <div class="avatar-preview" (click)="triggerAvatarUpload()">
-            <img *ngIf="character.avatar" [src]="character.avatar" alt="Avatar" />
-            <div *ngIf="!character.avatar" class="avatar-placeholder">
-              <ion-icon name="image-outline"></ion-icon>
-              <span>Upload Avatar</span>
-            </div>
+            @if (character.avatar) {
+              <img [src]="character.avatar" alt="Avatar" />
+            }
+            @if (!character.avatar) {
+              <div class="avatar-placeholder">
+                <ion-icon name="image-outline"></ion-icon>
+                <span>Upload Avatar</span>
+              </div>
+            }
           </div>
           <input type="file" #avatarInput accept="image/*" (change)="onAvatarSelected($event)" style="display:none" />
         </div>
-
+    
         <!-- Basic Info -->
         <div class="form-section">
           <div class="mb-section-header">
@@ -66,7 +70,7 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
             <ion-textarea [(ngModel)]="character.speechStyle" placeholder="How the character talks..." rows="2" class="mb-input"></ion-textarea>
           </div>
         </div>
-
+    
         <!-- Settings -->
         <div class="form-section">
           <div class="mb-section-header">
@@ -77,7 +81,7 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
             <ion-toggle [(ngModel)]="character.isPlayable" slot="end"></ion-toggle>
           </ion-item>
         </div>
-
+    
         <!-- Greeting Messages -->
         <div class="form-section">
           <div class="mb-section-header">
@@ -86,15 +90,19 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
               <ion-icon slot="icon-only" name="add-outline"></ion-icon>
             </ion-button>
           </div>
-          <div *ngFor="let g of character.greetingMessages; let i = index; trackBy: trackByIndex" class="greeting-row">
-            <ion-textarea [(ngModel)]="character.greetingMessages![i]" placeholder="Greeting message..." rows="2" class="mb-input"></ion-textarea>
-            <ion-button *ngIf="character.greetingMessages!.length > 1" fill="clear" size="small" color="danger"
-                        (click)="removeGreeting(i)">
-              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-            </ion-button>
-          </div>
+          @for (g of character.greetingMessages; track $index; let i = $index) {
+            <div class="greeting-row">
+              <ion-textarea [(ngModel)]="character.greetingMessages![i]" placeholder="Greeting message..." rows="2" class="mb-input"></ion-textarea>
+              @if (character.greetingMessages!.length > 1) {
+                <ion-button fill="clear" size="small" color="danger"
+                  (click)="removeGreeting(i)">
+                  <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                </ion-button>
+              }
+            </div>
+          }
         </div>
-
+    
         <!-- Tags -->
         <div class="form-section">
           <div class="mb-section-header">
@@ -102,19 +110,21 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
           </div>
           <div class="tags-input-row">
             <ion-input [(ngModel)]="newTag" placeholder="Add a tag..." class="mb-input"
-                       (keyup.enter)="addTag()"></ion-input>
+            (keyup.enter)="addTag()"></ion-input>
             <ion-button fill="clear" (click)="addTag()">
               <ion-icon slot="icon-only" name="add-outline"></ion-icon>
             </ion-button>
           </div>
           <div class="tags-list">
-            <ion-chip *ngFor="let tag of character.tags" (click)="removeTag(tag)">
-              {{ tag }}
-              <ion-icon name="close-outline"></ion-icon>
-            </ion-chip>
+            @for (tag of character.tags; track tag) {
+              <ion-chip (click)="removeTag(tag)">
+                {{ tag }}
+                <ion-icon name="close-outline"></ion-icon>
+              </ion-chip>
+            }
           </div>
         </div>
-
+    
         <!-- Save Button -->
         <ion-button expand="block" class="mb-btn-primary save-btn" (click)="save()">
           <ion-icon slot="start" name="save-outline"></ion-icon>
@@ -122,7 +132,7 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
         </ion-button>
       </div>
     </ion-content>
-  `,
+    `,
   styles: [`
     .editor-form {
       max-width: 600px;
@@ -232,11 +242,22 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
     }
   `],
   imports: [
-    CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonInput, IonTextarea, IonToggle, IonItem, IonLabel,
-    IonBackButton, IonButtons, IonChip
-  ],
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonButton,
+    IonIcon,
+    IonInput,
+    IonTextarea,
+    IonToggle,
+    IonItem,
+    IonLabel,
+    IonBackButton,
+    IonButtons,
+    IonChip
+],
 })
 export class CharacterEditorPage implements OnInit {
   character: Partial<Character> = createDefaultCharacter();

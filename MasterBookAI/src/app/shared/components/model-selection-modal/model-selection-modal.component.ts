@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton, IonIcon,
@@ -28,10 +28,18 @@ interface DisplayModel {
   selector: 'app-model-selection-modal',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton, IonIcon,
-    IonSearchbar, IonSpinner, IonBadge
-  ],
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonButtons,
+    IonButton,
+    IonIcon,
+    IonSearchbar,
+    IonSpinner,
+    IonBadge
+],
   template: `
     <ion-header class="ion-no-border ms-header">
       <ion-toolbar class="transparent-toolbar">
@@ -56,83 +64,95 @@ interface DisplayModel {
         </ion-searchbar>
       </div>
     </ion-header>
-
+    
     <ion-content class="ms-content ion-padding">
       <div class="ms-container">
-
+    
         <!-- Loading -->
-        <div class="loading-state" *ngIf="isLoading">
-          <ion-spinner name="crescent" color="warning"></ion-spinner>
-          <span>Loading models...</span>
-        </div>
-
+        @if (isLoading) {
+          <div class="loading-state">
+            <ion-spinner name="crescent" color="warning"></ion-spinner>
+            <span>Loading models...</span>
+          </div>
+        }
+    
         <!-- Local Models Section -->
-        <ng-container *ngIf="!isLoading && filteredLocalModels.length > 0">
+        @if (!isLoading && filteredLocalModels.length > 0) {
           <div class="section-header">
             <ion-icon name="hardware-chip-outline"></ion-icon>
             <span>Local Models</span>
           </div>
           <div class="model-list">
-            <div class="model-card"
-                 *ngFor="let model of filteredLocalModels"
-                 (click)="selectModel(model)"
-                 [class.selected]="currentModel === model.name">
-              <div class="card-header">
-                <div class="name-badge-wrapper">
-                  <span class="model-name">{{ model.name }}</span>
-                  <ion-badge color="success" class="source-badge">local</ion-badge>
+            @for (model of filteredLocalModels; track model) {
+              <div class="model-card"
+                (click)="selectModel(model)"
+                [class.selected]="currentModel === model.name">
+                <div class="card-header">
+                  <div class="name-badge-wrapper">
+                    <span class="model-name">{{ model.name }}</span>
+                    <ion-badge color="success" class="source-badge">local</ion-badge>
+                  </div>
+                  <ion-icon name="information-circle-outline"></ion-icon>
                 </div>
-                <ion-icon name="information-circle-outline"></ion-icon>
+                <div class="card-desc">{{ model.description }}</div>
+                @if (model.tags?.length) {
+                  <div class="card-tags">
+                    @for (t of model.tags?.slice(0, 3); track t) {
+                      <span class="tag">{{ t }}</span>
+                    }
+                  </div>
+                }
               </div>
-              <div class="card-desc">{{ model.description }}</div>
-              <div class="card-tags" *ngIf="model.tags?.length">
-                <span class="tag" *ngFor="let t of model.tags?.slice(0, 3)">{{ t }}</span>
-              </div>
-            </div>
+            }
           </div>
-        </ng-container>
-
+        }
+    
         <!-- Cloud Models Section -->
-        <ng-container *ngIf="!isLoading && filteredCloudModels.length > 0">
+        @if (!isLoading && filteredCloudModels.length > 0) {
           <div class="section-header">
             <ion-icon name="cloud-outline"></ion-icon>
             <span>Cloud Models</span>
           </div>
           <div class="model-list">
-            <div class="model-card"
-                 *ngFor="let model of filteredCloudModels"
-                 (click)="selectModel(model)"
-                 [class.selected]="currentModel === model.name">
-              <div class="card-header">
-                <div class="name-badge-wrapper">
-                  <span class="model-name">{{ model.name }}</span>
-                  <ion-badge color="tertiary" class="source-badge">{{ model.provider }}</ion-badge>
+            @for (model of filteredCloudModels; track model) {
+              <div class="model-card"
+                (click)="selectModel(model)"
+                [class.selected]="currentModel === model.name">
+                <div class="card-header">
+                  <div class="name-badge-wrapper">
+                    <span class="model-name">{{ model.name }}</span>
+                    <ion-badge color="tertiary" class="source-badge">{{ model.provider }}</ion-badge>
+                  </div>
+                  <ion-icon name="information-circle-outline"></ion-icon>
                 </div>
-                <ion-icon name="information-circle-outline"></ion-icon>
+                <div class="card-desc">{{ model.description }}</div>
               </div>
-              <div class="card-desc">{{ model.description }}</div>
-            </div>
+            }
           </div>
-        </ng-container>
-
+        }
+    
         <!-- Empty state -->
-        <div class="empty-state" *ngIf="!isLoading && filteredLocalModels.length === 0 && filteredCloudModels.length === 0">
-          <ion-icon name="hardware-chip-outline" class="empty-icon"></ion-icon>
-          <h3>No Models Available</h3>
-          <p>Download models from the Model Hub or configure cloud providers in Settings.</p>
-        </div>
-
+        @if (!isLoading && filteredLocalModels.length === 0 && filteredCloudModels.length === 0) {
+          <div class="empty-state">
+            <ion-icon name="hardware-chip-outline" class="empty-icon"></ion-icon>
+            <h3>No Models Available</h3>
+            <p>Download models from the Model Hub or configure cloud providers in Settings.</p>
+          </div>
+        }
+    
         <!-- Browse More -->
-        <div class="browse-more" *ngIf="!isLoading">
-          <ion-button expand="block" fill="outline" color="warning" (click)="browseModels()">
-            <ion-icon slot="start" name="arrow-forward-outline"></ion-icon>
-            Browse More Models
-          </ion-button>
-        </div>
-
+        @if (!isLoading) {
+          <div class="browse-more">
+            <ion-button expand="block" fill="outline" color="warning" (click)="browseModels()">
+              <ion-icon slot="start" name="arrow-forward-outline"></ion-icon>
+              Browse More Models
+            </ion-button>
+          </div>
+        }
+    
       </div>
     </ion-content>
-  `,
+    `,
   styles: [`
     .ms-header { background: #1c1c1e; }
     .transparent-toolbar { --background: transparent; color: white; }

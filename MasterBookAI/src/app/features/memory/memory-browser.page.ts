@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
@@ -31,10 +31,10 @@ import { Memory } from '../../core/models/chat-session.model';
         </ion-title>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="ion-padding">
       <div class="memory-container mb-fade-in">
-
+    
         <!-- Stats Bar -->
         <div class="stats-bar mb-glass-card">
           <div class="stat-item">
@@ -66,7 +66,7 @@ import { Memory } from '../../core/models/chat-session.model';
             </div>
           </div>
         </div>
-
+    
         <!-- Search & Filter -->
         <div class="filter-row">
           <ion-searchbar
@@ -76,7 +76,7 @@ import { Memory } from '../../core/models/chat-session.model';
             class="memory-search"
           ></ion-searchbar>
         </div>
-
+    
         <ion-segment [(ngModel)]="filterSource" (ionChange)="filterMemories()" class="source-filter">
           <ion-segment-button value="all">
             <ion-label>All</ion-label>
@@ -88,7 +88,7 @@ import { Memory } from '../../core/models/chat-session.model';
             <ion-label>📌 Pinned</ion-label>
           </ion-segment-button>
         </ion-segment>
-
+    
         <div class="sort-row">
           <span class="sort-label">Sort by:</span>
           <span class="mb-chip" [class.active]="sortBy === 'date'" (click)="setSortBy('date')">
@@ -101,75 +101,78 @@ import { Memory } from '../../core/models/chat-session.model';
             <ion-icon name="trending-down-outline"></ion-icon> Relevance
           </span>
         </div>
-
+    
         <!-- Empty State -->
-        <div *ngIf="filteredMemories.length === 0 && !isLoading" class="mb-empty-state">
-          <ion-icon name="bulb-outline"></ion-icon>
-          <h3>No Memories Yet</h3>
-          <p>Memories are automatically extracted during chats, or you can pin important messages manually</p>
-        </div>
-
+        @if (filteredMemories.length === 0 && !isLoading) {
+          <div class="mb-empty-state">
+            <ion-icon name="bulb-outline"></ion-icon>
+            <h3>No Memories Yet</h3>
+            <p>Memories are automatically extracted during chats, or you can pin important messages manually</p>
+          </div>
+        }
+    
         <!-- Memory Cards -->
         <div class="memory-list">
-          <div *ngFor="let memory of filteredMemories; let i = index; trackBy: trackByMemId"
-               class="memory-card mb-card mb-fade-in"
-               [style.animation-delay]="(i * 0.03) + 's'"
-               [class.high-importance]="memory.importanceScore >= 0.7"
-               [class.low-decay]="memory.decayFactor < 0.5">
-
-            <div class="memory-header">
-              <div class="memory-source-badge" [class.auto]="memory.source === 'auto'" [class.manual]="memory.source === 'manual'">
-                <ion-icon [name]="memory.source === 'auto' ? 'sparkles-outline' : 'bookmark-outline'"></ion-icon>
-                {{ memory.source === 'auto' ? 'Auto-extracted' : 'Pinned' }}
+          @for (memory of filteredMemories; track trackByMemId(i, memory); let i = $index) {
+            <div
+              class="memory-card mb-card mb-fade-in"
+              [style.animation-delay]="(i * 0.03) + 's'"
+              [class.high-importance]="memory.importanceScore >= 0.7"
+              [class.low-decay]="memory.decayFactor < 0.5">
+              <div class="memory-header">
+                <div class="memory-source-badge" [class.auto]="memory.source === 'auto'" [class.manual]="memory.source === 'manual'">
+                  <ion-icon [name]="memory.source === 'auto' ? 'sparkles-outline' : 'bookmark-outline'"></ion-icon>
+                  {{ memory.source === 'auto' ? 'Auto-extracted' : 'Pinned' }}
+                </div>
+                <div class="memory-scores">
+                  <span class="score-pill importance"
+                    [title]="'Importance: ' + (memory.importanceScore * 100).toFixed(0) + '%'">
+                    <ion-icon name="trending-up-outline"></ion-icon>
+                    {{ (memory.importanceScore * 100).toFixed(0) }}%
+                  </span>
+                  <span class="score-pill decay"
+                    [title]="'Relevance decay: ' + (memory.decayFactor * 100).toFixed(0) + '%'"
+                    [class.fading]="memory.decayFactor < 0.5">
+                    <ion-icon name="flash-outline"></ion-icon>
+                    {{ (memory.decayFactor * 100).toFixed(0) }}%
+                  </span>
+                </div>
               </div>
-              <div class="memory-scores">
-                <span class="score-pill importance"
-                      [title]="'Importance: ' + (memory.importanceScore * 100).toFixed(0) + '%'">
-                  <ion-icon name="trending-up-outline"></ion-icon>
-                  {{ (memory.importanceScore * 100).toFixed(0) }}%
-                </span>
-                <span class="score-pill decay"
-                      [title]="'Relevance decay: ' + (memory.decayFactor * 100).toFixed(0) + '%'"
-                      [class.fading]="memory.decayFactor < 0.5">
-                  <ion-icon name="flash-outline"></ion-icon>
-                  {{ (memory.decayFactor * 100).toFixed(0) }}%
-                </span>
+              <div class="memory-text">{{ memory.summaryText }}</div>
+              <div class="memory-footer">
+                <span class="memory-date">{{ formatDate(memory.createdAt) }}</span>
+                <div class="memory-actions">
+                  <ion-button fill="clear" size="small" (click)="boostMemory(memory)" title="Boost importance">
+                    <ion-icon slot="icon-only" name="trending-up-outline"></ion-icon>
+                  </ion-button>
+                  <ion-button fill="clear" size="small" (click)="editMemory(memory)" title="Edit">
+                    <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                  </ion-button>
+                  <ion-button fill="clear" size="small" color="danger" (click)="confirmDeleteMemory(memory)" title="Delete">
+                    <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                  </ion-button>
+                </div>
               </div>
             </div>
-
-            <div class="memory-text">{{ memory.summaryText }}</div>
-
-            <div class="memory-footer">
-              <span class="memory-date">{{ formatDate(memory.createdAt) }}</span>
-              <div class="memory-actions">
-                <ion-button fill="clear" size="small" (click)="boostMemory(memory)" title="Boost importance">
-                  <ion-icon slot="icon-only" name="trending-up-outline"></ion-icon>
-                </ion-button>
-                <ion-button fill="clear" size="small" (click)="editMemory(memory)" title="Edit">
-                  <ion-icon slot="icon-only" name="create-outline"></ion-icon>
-                </ion-button>
-                <ion-button fill="clear" size="small" color="danger" (click)="confirmDeleteMemory(memory)" title="Delete">
-                  <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-                </ion-button>
-              </div>
-            </div>
-          </div>
+          }
         </div>
-
+    
         <!-- Bulk Actions -->
-        <div class="bulk-actions" *ngIf="filteredMemories.length > 0">
-          <ion-button fill="clear" size="small" (click)="applyDecay()">
-            <ion-icon slot="start" name="refresh-outline"></ion-icon>
-            Apply Decay
-          </ion-button>
-          <ion-button fill="clear" size="small" color="danger" (click)="confirmClearAll()">
-            <ion-icon slot="start" name="trash-outline"></ion-icon>
-            Clear All
-          </ion-button>
-        </div>
+        @if (filteredMemories.length > 0) {
+          <div class="bulk-actions">
+            <ion-button fill="clear" size="small" (click)="applyDecay()">
+              <ion-icon slot="start" name="refresh-outline"></ion-icon>
+              Apply Decay
+            </ion-button>
+            <ion-button fill="clear" size="small" color="danger" (click)="confirmClearAll()">
+              <ion-icon slot="start" name="trash-outline"></ion-icon>
+              Clear All
+            </ion-button>
+          </div>
+        }
       </div>
     </ion-content>
-  `,
+    `,
   styles: [`
     .memory-container { max-width: 700px; margin: 0 auto; }
 
@@ -291,10 +294,18 @@ import { Memory } from '../../core/models/chat-session.model';
     }
   `],
   imports: [
-    CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonSearchbar, IonSegment, IonSegmentButton, IonLabel
-  ],
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonButton,
+    IonIcon,
+    IonSearchbar,
+    IonSegment,
+    IonSegmentButton,
+    IonLabel
+],
 })
 export class MemoryBrowserPage implements OnInit {
   allMemories: Memory[] = [];

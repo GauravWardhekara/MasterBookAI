@@ -40,68 +40,80 @@ import { Lorebook } from '../../../core/models/lorebook.model';
         ></ion-searchbar>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="ion-padding">
-      <div *ngIf="scenarios.length === 0" class="mb-empty-state">
-        <ion-icon name="book-outline"></ion-icon>
-        <h3>No Scenarios Yet</h3>
-        <p>Create a scenario with characters and lorebooks to start your adventure</p>
-        <ion-button class="mb-btn-primary" (click)="navigateTo('/scenarios/new')">
-          <ion-icon slot="start" name="add-outline"></ion-icon>
-          Create Scenario
-        </ion-button>
-      </div>
-
-      <div class="scenario-list" *ngIf="scenarios.length > 0">
-        <div *ngFor="let s of scenarios; let i = index"
-             class="scenario-card mb-glass-card mb-fade-in"
-             [style.animation-delay]="(i * 0.05) + 's'"
-             (click)="navigateTo('/scenarios/' + s.id + '/edit')">
-          <div class="sc-cover" *ngIf="s.coverImage">
-            <img [src]="s.coverImage" alt="" />
-          </div>
-          <div class="sc-cover sc-placeholder" *ngIf="!s.coverImage">
-            <div class="sc-gradient"></div>
-            <span>📖</span>
-          </div>
-          <div class="sc-body">
-            <div class="sc-title">{{ s.title }}</div>
-            <div class="sc-desc" *ngIf="s.description">{{ s.description | slice:0:80 }}...</div>
-            <div class="sc-meta">
-              <span class="sc-meta-item">
-                <ion-icon name="people-outline"></ion-icon>
-                {{ s.characterIds.length }} chars
-              </span>
-              <span class="sc-meta-item">
-                <ion-icon name="library-outline"></ion-icon>
-                {{ s.lorebookIds.length }} lorebooks
-              </span>
-              <span class="sc-meta-item mb-badge" [class]="'mb-badge-' + (s.defaultMode === 'chat' ? 'memory' : 'premise')">
-                {{ s.defaultMode | titlecase }}
-              </span>
-            </div>
-          </div>
-          <div class="sc-actions">
-            <ion-button fill="clear" size="small" color="success" (click)="startChat(s, $event)">
-              <ion-icon slot="icon-only" name="play-outline"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" size="small" (click)="editScenario(s, $event)">
-              <ion-icon slot="icon-only" name="create-outline"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" size="small" color="danger" (click)="confirmDelete(s, $event)">
-              <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-            </ion-button>
-          </div>
+      @if (scenarios.length === 0) {
+        <div class="mb-empty-state">
+          <ion-icon name="book-outline"></ion-icon>
+          <h3>No Scenarios Yet</h3>
+          <p>Create a scenario with characters and lorebooks to start your adventure</p>
+          <ion-button class="mb-btn-primary" (click)="navigateTo('/scenarios/new')">
+            <ion-icon slot="start" name="add-outline"></ion-icon>
+            Create Scenario
+          </ion-button>
         </div>
-      </div>
-
+      }
+    
+      @if (scenarios.length > 0) {
+        <div class="scenario-list">
+          @for (s of scenarios; track s; let i = $index) {
+            <div
+              class="scenario-card mb-glass-card mb-fade-in"
+              [style.animation-delay]="(i * 0.05) + 's'"
+              (click)="navigateTo('/scenarios/' + s.id + '/edit')">
+              @if (s.coverImage) {
+                <div class="sc-cover">
+                  <img [src]="s.coverImage" alt="" />
+                </div>
+              }
+              @if (!s.coverImage) {
+                <div class="sc-cover sc-placeholder">
+                  <div class="sc-gradient"></div>
+                  <span>📖</span>
+                </div>
+              }
+              <div class="sc-body">
+                <div class="sc-title">{{ s.title }}</div>
+                @if (s.description) {
+                  <div class="sc-desc">{{ s.description | slice:0:80 }}...</div>
+                }
+                <div class="sc-meta">
+                  <span class="sc-meta-item">
+                    <ion-icon name="people-outline"></ion-icon>
+                    {{ s.characterIds.length }} chars
+                  </span>
+                  <span class="sc-meta-item">
+                    <ion-icon name="library-outline"></ion-icon>
+                    {{ s.lorebookIds.length }} lorebooks
+                  </span>
+                  <span class="sc-meta-item mb-badge" [class]="'mb-badge-' + (s.defaultMode === 'chat' ? 'memory' : 'premise')">
+                    {{ s.defaultMode | titlecase }}
+                  </span>
+                </div>
+              </div>
+              <div class="sc-actions">
+                <ion-button fill="clear" size="small" color="success" (click)="startChat(s, $event)">
+                  <ion-icon slot="icon-only" name="play-outline"></ion-icon>
+                </ion-button>
+                <ion-button fill="clear" size="small" (click)="editScenario(s, $event)">
+                  <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+                </ion-button>
+                <ion-button fill="clear" size="small" color="danger" (click)="confirmDelete(s, $event)">
+                  <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                </ion-button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    
       <ion-fab slot="fixed" vertical="bottom" horizontal="end">
         <ion-fab-button (click)="navigateTo('/scenarios/new')">
           <ion-icon name="add-outline"></ion-icon>
         </ion-fab-button>
       </ion-fab>
     </ion-content>
-  `,
+    `,
   styles: [`
     .scenario-list { display: flex; flex-direction: column; gap: 14px; }
 

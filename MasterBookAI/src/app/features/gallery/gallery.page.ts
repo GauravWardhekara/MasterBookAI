@@ -57,82 +57,102 @@ import { ChatSession } from '../../core/models/chat-session.model';
         </div>
       </ion-toolbar>
     </ion-header>
-
+    
     <ion-content class="ion-padding">
-      <div *ngIf="filteredSessions.length === 0" class="mb-empty-state">
-        <ion-icon name="images-outline"></ion-icon>
-        <h3>No Sessions Yet</h3>
-        <p>Start a chat or story from a scenario, or load from a file</p>
-        <ion-button class="mb-btn-primary" (click)="importFromFile()">
-          <ion-icon slot="start" name="cloud-upload-outline"></ion-icon>
-          Load from File
-        </ion-button>
-      </div>
-
+      @if (filteredSessions.length === 0) {
+        <div class="mb-empty-state">
+          <ion-icon name="images-outline"></ion-icon>
+          <h3>No Sessions Yet</h3>
+          <p>Start a chat or story from a scenario, or load from a file</p>
+          <ion-button class="mb-btn-primary" (click)="importFromFile()">
+            <ion-icon slot="start" name="cloud-upload-outline"></ion-icon>
+            Load from File
+          </ion-button>
+        </div>
+      }
+    
       <!-- Grid View -->
-      <div class="gallery-grid" *ngIf="viewMode === 'grid' && filteredSessions.length > 0">
-        <div *ngFor="let session of filteredSessions; let i = index"
-             class="gallery-card mb-glass-card mb-fade-in"
-             [style.animation-delay]="(i * 0.04) + 's'"
-             (click)="openSession(session)">
-          <div class="gc-thumb">
-            <img *ngIf="session.thumbnailImage" [src]="session.thumbnailImage" alt="" />
-            <div *ngIf="!session.thumbnailImage" class="gc-thumb-placeholder">
-              <div class="gc-gradient" [style.background]="getGradient(i)"></div>
-              <span>{{ session.mode === 'chat' ? '💬' : '📖' }}</span>
+      @if (viewMode === 'grid' && filteredSessions.length > 0) {
+        <div class="gallery-grid">
+          @for (session of filteredSessions; track session; let i = $index) {
+            <div
+              class="gallery-card mb-glass-card mb-fade-in"
+              [style.animation-delay]="(i * 0.04) + 's'"
+              (click)="openSession(session)">
+              <div class="gc-thumb">
+                @if (session.thumbnailImage) {
+                  <img [src]="session.thumbnailImage" alt="" />
+                }
+                @if (!session.thumbnailImage) {
+                  <div class="gc-thumb-placeholder">
+                    <div class="gc-gradient" [style.background]="getGradient(i)"></div>
+                    <span>{{ session.mode === 'chat' ? '💬' : '📖' }}</span>
+                  </div>
+                }
+                <ion-button class="gc-fav-btn" fill="clear" (click)="toggleFavorite(session, $event)">
+                  <ion-icon slot="icon-only" [name]="session.isFavorite ? 'star' : 'star-outline'"
+                  [style.color]="session.isFavorite ? '#f59e0b' : 'white'"></ion-icon>
+                </ion-button>
+                <ion-button class="gc-menu-btn" fill="clear" (click)="showSessionActions(session, $event)">
+                  <ion-icon slot="icon-only" name="ellipsis-vertical-outline" style="color: white; font-size: 16px;"></ion-icon>
+                </ion-button>
+              </div>
+              <div class="gc-info">
+                <div class="gc-title">{{ session.title }}</div>
+                <div class="gc-meta">
+                  <span class="mb-badge" [class]="'mb-badge-' + (session.mode === 'chat' ? 'memory' : 'premise')">
+                    {{ session.mode | titlecase }}
+                  </span>
+                  <span class="gc-time">{{ getRelativeTime(session.updatedAt) }}</span>
+                </div>
+                @if (session.summary) {
+                  <div class="gc-summary">{{ session.summary | slice:0:50 }}...</div>
+                }
+              </div>
             </div>
-            <ion-button class="gc-fav-btn" fill="clear" (click)="toggleFavorite(session, $event)">
-              <ion-icon slot="icon-only" [name]="session.isFavorite ? 'star' : 'star-outline'"
-                        [style.color]="session.isFavorite ? '#f59e0b' : 'white'"></ion-icon>
-            </ion-button>
-            <ion-button class="gc-menu-btn" fill="clear" (click)="showSessionActions(session, $event)">
-              <ion-icon slot="icon-only" name="ellipsis-vertical-outline" style="color: white; font-size: 16px;"></ion-icon>
-            </ion-button>
-          </div>
-          <div class="gc-info">
-            <div class="gc-title">{{ session.title }}</div>
-            <div class="gc-meta">
-              <span class="mb-badge" [class]="'mb-badge-' + (session.mode === 'chat' ? 'memory' : 'premise')">
-                {{ session.mode | titlecase }}
-              </span>
-              <span class="gc-time">{{ getRelativeTime(session.updatedAt) }}</span>
-            </div>
-            <div class="gc-summary" *ngIf="session.summary">{{ session.summary | slice:0:50 }}...</div>
-          </div>
+          }
         </div>
-      </div>
-
+      }
+    
       <!-- List View -->
-      <div class="gallery-list" *ngIf="viewMode === 'list' && filteredSessions.length > 0">
-        <div *ngFor="let session of filteredSessions; let i = index"
-             class="gallery-list-item mb-card mb-fade-in"
-             [style.animation-delay]="(i * 0.03) + 's'"
-             (click)="openSession(session)">
-          <div class="gli-thumb">
-            <img *ngIf="session.thumbnailImage" [src]="session.thumbnailImage" alt="" />
-            <div *ngIf="!session.thumbnailImage" class="gli-thumb-placeholder">
-              {{ session.mode === 'chat' ? '💬' : '📖' }}
+      @if (viewMode === 'list' && filteredSessions.length > 0) {
+        <div class="gallery-list">
+          @for (session of filteredSessions; track session; let i = $index) {
+            <div
+              class="gallery-list-item mb-card mb-fade-in"
+              [style.animation-delay]="(i * 0.03) + 's'"
+              (click)="openSession(session)">
+              <div class="gli-thumb">
+                @if (session.thumbnailImage) {
+                  <img [src]="session.thumbnailImage" alt="" />
+                }
+                @if (!session.thumbnailImage) {
+                  <div class="gli-thumb-placeholder">
+                    {{ session.mode === 'chat' ? '💬' : '📖' }}
+                  </div>
+                }
+              </div>
+              <div class="gli-info">
+                <div class="gli-title">{{ session.title }}</div>
+                <div class="gli-meta">
+                  {{ session.messages.length }} messages · {{ getRelativeTime(session.updatedAt) }}
+                </div>
+              </div>
+              <div class="gli-actions">
+                <ion-button fill="clear" size="small" (click)="showSessionActions(session, $event)">
+                  <ion-icon slot="icon-only" name="ellipsis-vertical-outline"></ion-icon>
+                </ion-button>
+              </div>
             </div>
-          </div>
-          <div class="gli-info">
-            <div class="gli-title">{{ session.title }}</div>
-            <div class="gli-meta">
-              {{ session.messages.length }} messages · {{ getRelativeTime(session.updatedAt) }}
-            </div>
-          </div>
-          <div class="gli-actions">
-            <ion-button fill="clear" size="small" (click)="showSessionActions(session, $event)">
-              <ion-icon slot="icon-only" name="ellipsis-vertical-outline"></ion-icon>
-            </ion-button>
-          </div>
+          }
         </div>
-      </div>
-
+      }
+    
       <!-- Hidden file input -->
       <input type="file" #importInput accept=".json" (change)="onImportFileSelected($event)" style="display:none" />
       <input type="file" #thumbnailInput accept="image/*" (change)="onThumbnailSelected($event)" style="display:none" />
     </ion-content>
-  `,
+    `,
   styles: [`
     .filter-row {
       display: flex; gap: 8px; padding: 0 16px 8px; overflow-x: auto;
