@@ -22,6 +22,7 @@ import { Scenario, createDefaultScenario } from '../../../core/models/scenario.m
 import { Character } from '../../../core/models/character.model';
 import { Lorebook } from '../../../core/models/lorebook.model';
 import { CharacterPickerModalComponent } from '../../../shared/components/character-picker-modal/character-picker-modal.component';
+import { CharacterEditorPage } from '../../characters/character-editor/character-editor.page';
 
 @Component({
   selector: 'app-scenario-editor',
@@ -451,12 +452,30 @@ export class ScenarioEditorPage implements OnInit {
         }
       }
     } else if (role === 'create-new') {
-      // Navigation to /characters/new is handled by the modal itself
+      // Create new character from picker
+      this.createNewCharacter();
     }
   }
 
-  createNewCharacter(): void {
-    this.router.navigateByUrl('/characters/new');
+  async createNewCharacter(): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: CharacterEditorPage,
+      // No props needed since it's a new character
+    });
+    
+    await modal.present();
+    const { data, role } = await modal.onDidDismiss();
+    
+    if (role === 'save' && data) {
+      const char = data as Character;
+      if (!this.scenario.characterIds) this.scenario.characterIds = [];
+      if (!this.scenario.characterRoles) this.scenario.characterRoles = {};
+      if (!this.scenario.characterIds.includes(char.id)) {
+        this.scenario.characterIds.push(char.id);
+        this.scenario.characterRoles[char.id] = 'npc';
+        this.selectedCharacters.push(char);
+      }
+    }
   }
 
   toggleRole(charId: string): void {

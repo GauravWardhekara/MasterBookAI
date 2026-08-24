@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
   IonInput, IonTextarea, IonToggle, IonItem, IonLabel,
-  IonBackButton, IonButtons, IonChip, ToastController
+  IonBackButton, IonButtons, IonChip, ToastController, ModalController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -21,7 +21,14 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/characters"></ion-back-button>
+          @if (!isModal) {
+            <ion-back-button defaultHref="/characters"></ion-back-button>
+          }
+          @if (isModal) {
+            <ion-button (click)="closeModal()">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          }
         </ion-buttons>
         <ion-title>{{ isEditing ? 'Edit Character' : 'New Character' }}</ion-title>
         <ion-button slot="end" fill="clear" (click)="save()">
@@ -262,6 +269,7 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
 export class CharacterEditorPage implements OnInit {
   character: Partial<Character> = createDefaultCharacter();
   isEditing = false;
+  isModal = false;
   newTag = '';
   private characterId?: string;
 
@@ -270,11 +278,16 @@ export class CharacterEditorPage implements OnInit {
     private router: Router,
     private characterService: CharacterService,
     private toastCtrl: ToastController,
+    private modalCtrl: ModalController,
   ) {
     addIcons({ saveOutline, closeOutline, addOutline, imageOutline, trashOutline, arrowBackOutline });
   }
 
   async ngOnInit(): Promise<void> {
+    // Check if we're inside a modal
+    const topModal = await this.modalCtrl.getTop();
+    this.isModal = !!topModal;
+
     this.characterId = this.route.snapshot.paramMap.get('id') || undefined;
     if (this.characterId) {
       this.isEditing = true;
@@ -282,6 +295,12 @@ export class CharacterEditorPage implements OnInit {
       if (char) {
         this.character = { ...char };
       }
+    }
+  }
+
+  closeModal(): void {
+    if (this.isModal) {
+      this.modalCtrl.dismiss();
     }
   }
 
@@ -348,7 +367,14 @@ export class CharacterEditorPage implements OnInit {
       color: 'success',
     });
     await toast.present();
-    this.router.navigateByUrl('/characters');
+    
+    if (this.isModal) {
+      // In a modal context, dismiss and pass back the saved character
+      const finalChar = await this.characterService.getCharacter(this.character.id!) || this.character;
+      this.modalCtrl.dismiss(finalChar, 'save');
+    } else {
+      this.router.navigateByUrl('/characters');
+    }
   }
 
   trackByIndex(index: number): number {

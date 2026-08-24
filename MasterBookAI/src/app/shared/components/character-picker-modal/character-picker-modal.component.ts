@@ -590,7 +590,6 @@ export class CharacterPickerModalComponent implements OnInit {
   /** Navigate to character creation page */
   createNewCharacter(): void {
     this.modalCtrl.dismiss(null, 'create-new');
-    this.router.navigateByUrl('/characters/new');
   }
 
   trackById(index: number, char: Character): string {

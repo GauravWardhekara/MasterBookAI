@@ -60,7 +60,8 @@ import { Lorebook } from '../../../core/models/lorebook.model';
           @for (s of scenarios; track s; let i = $index) {
             <div
               class="scenario-card mb-glass-card mb-fade-in"
-              [style.animation-delay]="(i * 0.05) + 's'">
+              [style.animation-delay]="(i * 0.05) + 's'"
+              (click)="navigateTo('/scenarios/' + s.id)">
               @if (s.coverImage) {
                 <div class="sc-cover">
                   <img [src]="s.coverImage" alt="" />

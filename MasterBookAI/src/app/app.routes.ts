@@ -76,4 +76,8 @@ export const routes: Routes = [
     path: 'story/:sessionId',
     loadComponent: () => import('./features/story-mode/story-mode.page').then(m => m.StoryModePage),
   },
+  {
+    path: 'scenarios/:id',
+    loadComponent: () => import('./features/scenarios/scenario-detail/scenario-detail.page').then(m => m.ScenarioDetailPage),
+  }
 ];
