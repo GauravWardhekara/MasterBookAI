@@ -18,7 +18,7 @@ import {
 import { Router } from '@angular/router';
 import { ModelHubService } from '../../core/services/model-hub.service';
 import { DeviceCapabilityService } from '../../core/services/device-capability.service';
-import { HubModel, DeviceCapabilities, LocalModel } from '../../core/models/model-hub.model';
+import { HubModel, ModelFile, DeviceCapabilities, LocalModel } from '../../core/models/model-hub.model';
 
 @Component({
   selector: 'app-model-hub',

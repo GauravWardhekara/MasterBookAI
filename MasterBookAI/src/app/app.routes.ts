@@ -54,6 +54,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/memory/memory-browser.page').then(m => m.MemoryBrowserPage),
       },
       {
+        path: 'models',
+        loadComponent: () => import('./features/model-hub/model-hub.page').then(m => m.ModelHubPage),
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.page').then(m => m.SettingsPage),
       },

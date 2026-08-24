@@ -6,7 +6,7 @@ import { addIcons } from 'ionicons';
 import {
   homeOutline, home, bookOutline, book, peopleOutline, people,
   libraryOutline, library, imagesOutline, images, settingsOutline, settings,
-  bulbOutline, bulb
+  bulbOutline, bulb, hardwareChipOutline, hardwareChip
 } from 'ionicons/icons';
 
 @Component({
@@ -32,6 +32,11 @@ import {
         <ion-tab-button tab="memories" href="/memories">
           <ion-icon name="bulb-outline"></ion-icon>
           <ion-label>Memories</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="models" href="/models">
+          <ion-icon name="hardware-chip-outline"></ion-icon>
+          <ion-label>Models</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="settings" href="/settings">
@@ -71,7 +76,7 @@ export class TabsLayout {
     addIcons({
       homeOutline, home, bookOutline, book, peopleOutline, people,
       libraryOutline, library, imagesOutline, images, settingsOutline, settings,
-      bulbOutline, bulb
+      bulbOutline, bulb, hardwareChipOutline, hardwareChip
     });
   }
 }

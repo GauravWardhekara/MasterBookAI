@@ -7,3 +7,4 @@ export { Preset, createDefaultPreset } from './preset.model';
 export { ConnectionProfile, PromptTemplate, ImageGenConfig, createDefaultConnectionProfile } from './connection-profile.model';
 export { ChatExportFile, SillyTavernWorldInfo, SillyTavernWIEntry } from './export-file.model';
 export { GeneratedImage, ImageProviderType, ImageGenSessionConfig, createDefaultImageGenSessionConfig } from './image-gen-config.model';
+export { HubModel, ModelFile, LocalModel, DeviceTier, DeviceCapabilities, DEVICE_TIER_THRESHOLDS } from './model-hub.model';
