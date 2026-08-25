@@ -27,7 +27,7 @@ import { Lorebook } from '../../../core/models/lorebook.model';
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>Scenarios</ion-title>
+        <ion-title>Worlds</ion-title>
         <ion-button slot="end" fill="clear" (click)="navigateTo('/scenarios/new')">
           <ion-icon slot="icon-only" name="add-outline"></ion-icon>
         </ion-button>
@@ -36,7 +36,7 @@ import { Lorebook } from '../../../core/models/lorebook.model';
         <ion-searchbar
           [(ngModel)]="searchQuery"
           (ionInput)="onSearch()"
-          placeholder="Search scenarios..."
+          placeholder="Search worlds..."
           class="mb-input"
         ></ion-searchbar>
       </ion-toolbar>
@@ -46,11 +46,11 @@ import { Lorebook } from '../../../core/models/lorebook.model';
       @if (scenarios.length === 0) {
         <div class="mb-empty-state">
           <ion-icon name="book-outline"></ion-icon>
-          <h3>No Scenarios Yet</h3>
-          <p>Create a scenario with characters and lorebooks to start your adventure</p>
+          <h3>No Worlds Yet</h3>
+          <p>Create a world with characters and lorebooks to start your adventure</p>
           <ion-button class="mb-btn-primary" (click)="navigateTo('/scenarios/new')">
             <ion-icon slot="start" name="add-outline"></ion-icon>
-            Create Scenario
+            Create World
           </ion-button>
         </div>
       }

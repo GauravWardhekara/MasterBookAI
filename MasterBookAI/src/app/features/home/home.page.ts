@@ -36,7 +36,7 @@ import { MemoryService } from '../../core/services/memory.service';
         <p class="hero-subtitle">Build immersive AI-powered narratives with custom characters and rich lore</p>
         <ion-button class="mb-btn-primary hero-btn" (click)="navigateTo('/scenarios/new')">
           <ion-icon slot="start" name="rocket-outline"></ion-icon>
-          New Scenario
+           New World
         </ion-button>
       </div>
 
@@ -44,7 +44,7 @@ import { MemoryService } from '../../core/services/memory.service';
         <div class="stat-card" (click)="navigateTo('/scenarios')">
           <ion-icon name="book-outline" color="primary"></ion-icon>
           <div class="stat-value">{{ scenarioCount }}</div>
-          <div class="stat-label">Scenarios</div>
+          <div class="stat-label">Worlds</div>
         </div>
         <div class="stat-card" (click)="navigateTo('/characters')">
           <ion-icon name="people-outline" style="color: var(--mb-secondary)"></ion-icon>
@@ -72,7 +72,7 @@ import { MemoryService } from '../../core/services/memory.service';
             <div class="action-icon" style="background: rgba(167, 139, 250, 0.1)">
               <ion-icon name="book-outline" style="color: var(--mb-primary)"></ion-icon>
             </div>
-            <span>New Scenario</span>
+            <span>New World</span>
           </div>
           <div class="action-card" (click)="navigateTo('/characters/new')">
             <div class="action-icon" style="background: rgba(96, 165, 250, 0.1)">

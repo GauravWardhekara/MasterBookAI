@@ -40,6 +40,16 @@ export class ScenarioService {
       defaultPOV: data.defaultPOV || '1st-person',
       defaultTense: data.defaultTense || 'present',
       tags: data.tags || [],
+      characterName: data.characterName || '',
+      characterTitle: data.characterTitle || '',
+      characterImage: data.characterImage,
+      characterIntro: data.characterIntro || '',
+      personalityBackground: data.personalityBackground || '',
+      appearance: data.appearance || '',
+      greeting: data.greeting || '',
+      scenarioText: data.scenarioText || '',
+      exampleDialogue: data.exampleDialogue || '',
+      isNsfw: data.isNsfw || false,
     };
     await this.db.scenarios.add(scenario);
     return scenario;

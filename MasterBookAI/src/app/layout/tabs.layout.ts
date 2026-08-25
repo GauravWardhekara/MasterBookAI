@@ -21,7 +21,7 @@ import {
 
         <ion-tab-button tab="scenarios" href="/scenarios">
           <ion-icon name="book-outline"></ion-icon>
-          <ion-label>Scenarios</ion-label>
+          <ion-label>Worlds</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="gallery" href="/gallery">
