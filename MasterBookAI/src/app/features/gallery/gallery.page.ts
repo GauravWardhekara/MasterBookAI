@@ -44,7 +44,7 @@ import { MemoryBrowserPage } from '../memory/memory-browser.page';
           </ion-segment-button>
         </ion-segment>
       </ion-toolbar>
-      <ion-toolbar *ngIf="activeTab === 'chats'">
+      @if (activeTab === 'chats') {
       <ion-toolbar>
         <ion-searchbar
           [(ngModel)]="searchQuery"
@@ -70,6 +70,7 @@ import { MemoryBrowserPage } from '../memory/memory-browser.page';
           </select>
         </div>
       </ion-toolbar>
+      }
     </ion-header>
     
     <ion-content class="ion-padding">
