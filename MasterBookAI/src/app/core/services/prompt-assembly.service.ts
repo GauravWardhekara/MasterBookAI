@@ -48,7 +48,8 @@ export class PromptAssemblyService {
     activeCharacters: Character[],
     messages: Message[],
     lorebooks: Lorebook[],
-    contextSize: number = 4096
+    contextSize: number = 4096,
+    sessionId?: string
   ): Promise<AssembledPrompt> {
     // 1. Build system prompt
     const systemParts: string[] = [];
@@ -148,7 +149,7 @@ export class PromptAssemblyService {
       // We trigger memory auto-extraction in the background so it doesn't block assembly
       this.memoryService.autoExtractMemories(
         droppedMessages,
-        session.id,
+        sessionId || scenario.id,
         scenario.id,
         droppedMessages.length
       ).catch(err => console.warn('Background compression failed:', err));
@@ -164,7 +165,7 @@ export class PromptAssemblyService {
         lastMsg.content = `${lastMsg.content}\n\n[System Note: ${postHistoryInstructions}]`;
       } else {
         trimmedMessages.push({
-          id: 'jailbreak', role: 'system', senderId: 'system', content: postHistoryInstructions, timestamp: Date.now(), generatedImageRefs: [], isPinnedAsMemory: false, tokenCount: 0
+          id: 'jailbreak', role: 'system', senderId: 'system', senderName: 'System', content: postHistoryInstructions, timestamp: new Date().toISOString(), generatedImageRefs: [], isPinnedAsMemory: false, tokenCount: 0
         });
       }
     }

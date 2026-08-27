@@ -7,6 +7,7 @@ import {
   IonSearchbar, IonFab, IonFabButton,
   AlertController, ToastController, ModalController
 } from '@ionic/angular/standalone';
+import { SettingsMenuComponent } from '../../../shared/components/settings-menu/settings-menu.component';
 import { addIcons } from 'ionicons';
 import {
   addOutline, createOutline, trashOutline, bookOutline, playOutline,
@@ -31,6 +32,7 @@ import { Lorebook } from '../../../core/models/lorebook.model';
         <ion-button slot="end" fill="clear" (click)="navigateTo(baseRoute + '/new')">
           <ion-icon slot="icon-only" name="add-outline"></ion-icon>
         </ion-button>
+        <app-settings-menu slot="end"></app-settings-menu>
       </ion-toolbar>
       <ion-toolbar>
         <ion-searchbar
@@ -170,7 +172,7 @@ import { Lorebook } from '../../../core/models/lorebook.model';
   imports: [
     CommonModule, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonSearchbar, IonFab, IonFabButton
+    IonSearchbar, IonFab, IonFabButton, SettingsMenuComponent
   ],
 })
 export class ScenarioListPage implements OnInit {

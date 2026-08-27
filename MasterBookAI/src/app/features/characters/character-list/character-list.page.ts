@@ -11,6 +11,7 @@ import { addIcons } from 'ionicons';
 import {
   addOutline, createOutline, trashOutline, personOutline, searchOutline, cloudDownloadOutline
 } from 'ionicons/icons';
+import { SettingsMenuComponent } from '../../../shared/components/settings-menu/settings-menu.component';
 import { CharacterService } from '../../../core/services/character.service';
 import { Character } from '../../../core/models/character.model';
 import { CharacterImportModalComponent } from '../../../shared/components/character-import-modal/character-import-modal.component';
@@ -28,6 +29,7 @@ import { CharacterImportModalComponent } from '../../../shared/components/charac
           <ion-button fill="clear" (click)="navigateTo('/characters/new')">
             <ion-icon slot="icon-only" name="add-outline"></ion-icon>
           </ion-button>
+          <app-settings-menu></app-settings-menu>
         </ion-buttons>
       </ion-toolbar>
       <ion-toolbar>
@@ -185,7 +187,7 @@ import { CharacterImportModalComponent } from '../../../shared/components/charac
   imports: [
     CommonModule, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonSearchbar, IonFab, IonFabButton, IonButtons
+    IonSearchbar, IonFab, IonFabButton, IonButtons, SettingsMenuComponent
   ],
 })
 export class CharacterListPage implements OnInit {

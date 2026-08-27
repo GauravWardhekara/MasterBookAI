@@ -25,7 +25,7 @@ import { ConnectionProfile, createDefaultConnectionProfile, ImageGenConfig } fro
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>⚙️ Settings</ion-title>
+        <ion-title>🔗 Connections</ion-title>
       </ion-toolbar>
     </ion-header>
     

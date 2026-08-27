@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -291,7 +292,6 @@ import { Input } from '@angular/core';
           <ion-icon slot="start" name="save-outline"></ion-icon>
           {{ isEditing ? 'Update Character' : 'Create Character' }}
         </ion-button>
-      </div>
     </ion-content>
     `,
   styles: [`
@@ -407,6 +407,7 @@ import { Input } from '@angular/core';
     }
   `],
   imports: [
+    CommonModule,
     FormsModule,
     IonHeader,
     IonToolbar,

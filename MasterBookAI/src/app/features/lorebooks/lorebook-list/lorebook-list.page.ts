@@ -12,6 +12,7 @@ import {
   addOutline, createOutline, trashOutline, copyOutline, downloadOutline,
   libraryOutline, searchOutline, ellipsisVerticalOutline, cloudUploadOutline
 } from 'ionicons/icons';
+import { SettingsMenuComponent } from '../../../shared/components/settings-menu/settings-menu.component';
 import { LorebookService } from '../../../core/services/lorebook.service';
 import { Lorebook } from '../../../core/models/lorebook.model';
 
@@ -27,6 +28,7 @@ import { Lorebook } from '../../../core/models/lorebook.model';
         <ion-button slot="end" fill="clear" (click)="navigateTo('/lorebooks/new')">
           <ion-icon slot="icon-only" name="add-outline"></ion-icon>
         </ion-button>
+        <app-settings-menu slot="end"></app-settings-menu>
       </ion-toolbar>
       <ion-toolbar>
         <ion-searchbar
@@ -187,7 +189,7 @@ import { Lorebook } from '../../../core/models/lorebook.model';
   imports: [
     CommonModule, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
-    IonSearchbar, IonFab, IonFabButton, IonChip
+    IonSearchbar, IonFab, IonFabButton, IonChip, SettingsMenuComponent
   ],
 })
 export class LorebookListPage implements OnInit {

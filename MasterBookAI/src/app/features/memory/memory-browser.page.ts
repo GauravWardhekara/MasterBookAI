@@ -21,18 +21,7 @@ import { Memory } from '../../core/models/chat-session.model';
 @Component({
   selector: 'app-memory-browser',
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>
-          <span class="page-title">
-            <ion-icon name="bulb-outline" class="title-icon"></ion-icon>
-            Memories
-          </span>
-        </ion-title>
-      </ion-toolbar>
-    </ion-header>
-    
-    <ion-content class="ion-padding">
+    <div class="ion-padding">
       <div class="memory-container mb-fade-in">
     
         <!-- Stats Bar -->
@@ -171,7 +160,7 @@ import { Memory } from '../../core/models/chat-session.model';
           </div>
         }
       </div>
-    </ion-content>
+    </div>
     `,
   styles: [`
     .memory-container { max-width: 700px; margin: 0 auto; }
@@ -295,10 +284,6 @@ import { Memory } from '../../core/models/chat-session.model';
   `],
   imports: [
     FormsModule,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
-    IonContent,
     IonButton,
     IonIcon,
     IonSearchbar,

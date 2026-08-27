@@ -7,7 +7,7 @@ import {
   homeOutline, home, bookOutline, book, peopleOutline, people,
   personOutline, person,
   libraryOutline, library, imagesOutline, images, settingsOutline, settings,
-  bulbOutline, bulb, hardwareChipOutline, hardwareChip
+  bulbOutline, bulb, hardwareChipOutline, hardwareChip, chatbubblesOutline, chatbubbles
 } from 'ionicons/icons';
 
 @Component({
@@ -30,24 +30,9 @@ import {
           <ion-label>Scenarios</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="gallery" href="/gallery">
-          <ion-icon name="images-outline"></ion-icon>
-          <ion-label>Gallery</ion-label>
-        </ion-tab-button>
-
-        <ion-tab-button tab="memories" href="/memories">
-          <ion-icon name="bulb-outline"></ion-icon>
-          <ion-label>Memories</ion-label>
-        </ion-tab-button>
-
-        <ion-tab-button tab="models" href="/models">
-          <ion-icon name="hardware-chip-outline"></ion-icon>
-          <ion-label>Models</ion-label>
-        </ion-tab-button>
-
-        <ion-tab-button tab="settings" href="/settings">
-          <ion-icon name="settings-outline"></ion-icon>
-          <ion-label>Settings</ion-label>
+        <ion-tab-button tab="chats" href="/chats">
+          <ion-icon name="chatbubbles-outline"></ion-icon>
+          <ion-label>Chats</ion-label>
         </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
@@ -83,7 +68,7 @@ export class TabsLayout {
       homeOutline, home, bookOutline, book, peopleOutline, people,
       personOutline, person,
       libraryOutline, library, imagesOutline, images, settingsOutline, settings,
-      bulbOutline, bulb, hardwareChipOutline, hardwareChip
+      bulbOutline, bulb, hardwareChipOutline, hardwareChip, chatbubblesOutline, chatbubbles
     });
   }
 }

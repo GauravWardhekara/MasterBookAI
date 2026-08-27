@@ -81,7 +81,7 @@ export class HuggingFaceStrategy implements LLMStrategy {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\\n');
+        const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
         for (const line of lines) {
@@ -127,7 +127,7 @@ export class HuggingFaceStrategy implements LLMStrategy {
   private buildUrl(endpoint: string, model: string): string {
     // Default HF inference API base
     const base = endpoint || 'https://api-inference.huggingface.co/models';
-    return \`\${base.replace(/\\/+$/, '')}/\${model}\`;
+    return `${base.replace(/\/+$/, '')}/${model}`;
   }
 
   private buildHeaders(profile: ConnectionProfile): Record<string, string> {
@@ -135,7 +135,7 @@ export class HuggingFaceStrategy implements LLMStrategy {
       'Content-Type': 'application/json',
     };
     if (profile.apiKey) {
-      headers['Authorization'] = \`Bearer \${profile.apiKey}\`;
+      headers['Authorization'] = `Bearer ${profile.apiKey}`;
     }
     return headers;
   }
@@ -143,9 +143,9 @@ export class HuggingFaceStrategy implements LLMStrategy {
   private buildBody(messages: LLMMessage[], options: CompletionOptions): any {
     // Combine messages into a single prompt string since HF basic API expects 'inputs'
     const prompt = messages.map(m => {
-        if (m.role === 'system') return \`System: \${m.content}\\n\`;
-        if (m.role === 'user') return \`User: \${m.content}\\n\`;
-        return \`Assistant: \${m.content}\\n\`;
+        if (m.role === 'system') return `System: ${m.content}\n`;
+        if (m.role === 'user') return `User: ${m.content}\n`;
+        return `Assistant: ${m.content}\n`;
     }).join('') + 'Assistant: ';
 
     return {

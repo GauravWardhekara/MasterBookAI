@@ -275,7 +275,7 @@ import { GENRE_PRESETS } from '../../../core/data/genre-presets.data';
               <label>Your Role</label>
             </div>
             <p class="field-desc">Select a preset role for yourself, or leave it blank to define your own.</p>
-            <select [(ngModel)]="scenario.userRole" class="mb-select">
+            <select [(ngModel)]="scenario.selectedRole" class="mb-select">
               <option value="">Custom Role...</option>
               @for (role of selectedGenreObj.roles; track role) {
                 <option [value]="role">{{ role }}</option>
@@ -727,7 +727,7 @@ export class ScenarioEditorPage implements OnInit {
   
   onGenreChange(): void {
      // Optional: reset role if genre changes
-     this.scenario.userRole = '';
+     this.scenario.selectedRole = '';
   }
 
   // ── Image Upload ──

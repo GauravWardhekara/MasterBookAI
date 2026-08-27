@@ -857,7 +857,7 @@ export class StoryModePage implements OnInit {
 
     // Check for RPG actions
     if (text.startsWith('!') && this.scenario?.isRpgModeEnabled) {
-      const resolution = this.rpgResolutionService.resolveAction(text, this.scenario, this.activePersona);
+      const resolution = this.rpgResolutionService.resolveAction(text, this.scenario, this.persona!);
       text = resolution.actionText; // Store the stripped action text as user input
       systemInjectedAction = resolution.systemInjectedText;
     }
@@ -893,7 +893,7 @@ export class StoryModePage implements OnInit {
 
     // Advance RPG Turn (Needs decrement)
     if (this.scenario?.isRpgModeEnabled) {
-      this.rpgResolutionService.advanceTurn(this.activePersona);
+      this.rpgResolutionService.advanceTurn(this.persona!);
     }
 
     // If there's unsaved direction text in the input, save it first
@@ -922,7 +922,7 @@ export class StoryModePage implements OnInit {
       
       // Inject RPG Needs warnings if applicable
       if (this.scenario?.isRpgModeEnabled) {
-        const needsPrompt = this.rpgResolutionService.getNeedsSystemPrompt(this.activePersona);
+        const needsPrompt = this.rpgResolutionService.getNeedsSystemPrompt(this.persona!);
         if (needsPrompt) {
           storySystemPrompt += `\n\n${needsPrompt}`;
         }
@@ -1158,7 +1158,7 @@ export class StoryModePage implements OnInit {
     const modal = await this.modalCtrl.create({
       component: WorldMapModalComponent,
       componentProps: {
-        lorebooks: this.activeLorebooks
+        lorebooks: this.lorebooks
       }
     });
     await modal.present();
@@ -1171,7 +1171,7 @@ export class StoryModePage implements OnInit {
       component: RpgSheetModalComponent,
       componentProps: {
         rpgSystem: this.scenario.rpgSystem,
-        persona: this.activePersona,
+        persona: this.persona!,
         characters: this.activeCharacters
       }
     });
@@ -1564,6 +1564,8 @@ IMPORTANT: Messages from the user are author directions — they guide what shou
         this.session = updated;
       }
     }
+  }
+
   // ── Slash Commands ──
   
   private async handleSlashCommand(command: string): Promise<boolean> {

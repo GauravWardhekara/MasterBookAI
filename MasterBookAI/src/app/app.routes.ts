@@ -66,20 +66,8 @@ export const routes: Routes = [
         loadComponent: () => import('./features/lorebooks/lorebook-editor/lorebook-editor.page').then(m => m.LorebookEditorPage),
       },
       {
-        path: 'gallery',
+        path: 'chats',
         loadComponent: () => import('./features/gallery/gallery.page').then(m => m.GalleryPage),
-      },
-      {
-        path: 'memories',
-        loadComponent: () => import('./features/memory/memory-browser.page').then(m => m.MemoryBrowserPage),
-      },
-      {
-        path: 'models',
-        loadComponent: () => import('./features/model-hub/model-hub.page').then(m => m.ModelHubPage),
-      },
-      {
-        path: 'settings',
-        loadComponent: () => import('./features/settings/settings.page').then(m => m.SettingsPage),
       },
       {
         path: '',
@@ -87,6 +75,14 @@ export const routes: Routes = [
         pathMatch: 'full',
       },
     ],
+  },
+  {
+    path: 'settings',
+    loadComponent: () => import('./features/settings/settings.page').then(m => m.SettingsPage),
+  },
+  {
+    path: 'models',
+    loadComponent: () => import('./features/model-hub/model-hub.page').then(m => m.ModelHubPage),
   },
   {
     path: 'chat/:sessionId',

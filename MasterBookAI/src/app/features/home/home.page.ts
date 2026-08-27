@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon
 } from '@ionic/angular/standalone';
+import { SettingsMenuComponent } from '../../shared/components/settings-menu/settings-menu.component';
 import { addIcons } from 'ionicons';
 import {
   addOutline, bookOutline, peopleOutline, libraryOutline,
@@ -27,6 +28,7 @@ import { MemoryService } from '../../core/services/memory.service';
             MasterBookAI
           </span>
         </ion-title>
+        <app-settings-menu slot="end"></app-settings-menu>
       </ion-toolbar>
     </ion-header>
 
@@ -57,7 +59,7 @@ import { MemoryService } from '../../core/services/memory.service';
           <div class="stat-value">{{ characterCount }}</div>
           <div class="stat-label">Characters</div>
         </div>
-        <div class="stat-card" (click)="navigateTo('/gallery')">
+        <div class="stat-card" (click)="navigateTo('/chats')">
           <ion-icon name="chatbubbles-outline" style="color: var(--mb-success)"></ion-icon>
           <div class="stat-value">{{ sessionCount }}</div>
           <div class="stat-label">Sessions</div>
@@ -93,11 +95,11 @@ import { MemoryService } from '../../core/services/memory.service';
             </div>
             <span>New Lorebook</span>
           </div>
-          <div class="action-card" (click)="navigateTo('/gallery')">
+          <div class="action-card" (click)="navigateTo('/chats')">
             <div class="action-icon" style="background: rgba(52, 211, 153, 0.1)">
               <ion-icon name="chatbubbles-outline" style="color: var(--mb-success)"></ion-icon>
             </div>
-            <span>Gallery</span>
+            <span>Chats</span>
           </div>
         </div>
       </div>
@@ -324,7 +326,8 @@ import { MemoryService } from '../../core/services/memory.service';
     IonTitle,
     IonContent,
     IonButton,
-    IonIcon
+    IonIcon,
+    SettingsMenuComponent
 ],
 })
 export class HomePage implements OnInit {
