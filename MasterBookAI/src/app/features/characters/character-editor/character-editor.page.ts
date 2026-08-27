@@ -10,10 +10,12 @@ import {
 import { addIcons } from 'ionicons';
 import {
   saveOutline, closeOutline, addOutline, imageOutline, trashOutline,
-  arrowBackOutline
+  arrowBackOutline, settingsOutline, textOutline, chatbubbleEllipsesOutline,
+  statsChartOutline
 } from 'ionicons/icons';
 import { CharacterService } from '../../../core/services/character.service';
-import { Character, createDefaultCharacter } from '../../../core/models/character.model';
+import { Character, createDefaultCharacter, RpgData, DnDStats, CultivationStats } from '../../../core/models/character.model';
+import { Input } from '@angular/core';
 
 @Component({
   selector: 'app-character-editor',
@@ -78,18 +80,151 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
           </div>
         </div>
     
-        <!-- Settings -->
+        <!-- Advanced AI Settings -->
         <div class="form-section">
           <div class="mb-section-header">
-            <span class="mb-section-title">Settings</span>
+            <span class="mb-section-title">Advanced Prompts</span>
           </div>
-          <ion-item lines="none" class="toggle-item">
-            <ion-label>Playable Character</ion-label>
-            <ion-toggle [(ngModel)]="character.isPlayable" slot="end"></ion-toggle>
-          </ion-item>
+          <div class="form-field">
+            <label>System Prompt Override</label>
+            <ion-textarea [(ngModel)]="character.systemPrompt" placeholder="Character-specific system prompt..." rows="3" class="mb-input"></ion-textarea>
+          </div>
+          <div class="form-field">
+            <label>Post-History Instructions (Jailbreak)</label>
+            <ion-textarea [(ngModel)]="character.postHistoryInstructions" placeholder="Injected right before the AI responds..." rows="3" class="mb-input"></ion-textarea>
+          </div>
+          <div class="form-field">
+            <label>Talkativeness</label>
+            <div class="slider-row">
+               <input type="range" min="0" max="1" step="0.1" [(ngModel)]="character.talkativeness" style="flex:1">
+               <span style="font-size:12px;width:30px">{{ character.talkativeness | number:'1.1-1' }}</span>
+            </div>
+          </div>
         </div>
     
-        <!-- Greeting Messages -->
+        <!-- Settings -->
+        <div class="form-field" style="margin-top:14px">
+          <label>Creator Notes</label>
+          <ion-textarea [(ngModel)]="character.creatorNotes" placeholder="Notes for other users..." rows="2" class="mb-input"></ion-textarea>
+        </div>
+      </div>
+
+      <!-- ── RPG Mechanics ── -->
+      <div class="form-section">
+        <div class="mb-section-header">
+          <span class="mb-section-title"><ion-icon name="stats-chart-outline" style="margin-right:4px"></ion-icon> RPG Compatibility</span>
+        </div>
+        <div class="form-field">
+          <label>RPG System</label>
+          <select [(ngModel)]="rpgSystem" (change)="onRpgSystemChange()" class="mb-select">
+            <option value="None">None</option>
+            <option value="D&D">Standard D&D</option>
+            <option value="Cultivation">Cultivation (Xianxia)</option>
+          </select>
+        </div>
+
+        @if (rpgSystem && rpgSystem !== 'None' && character.rpgData) {
+          @if (rpgSystem === 'D&D' && character.rpgData.dndStats) {
+            <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+              <div class="form-field">
+                <label>Level</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.dndStats.level" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>HP</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.dndStats.hp" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>Mana</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.dndStats.mana" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>STR</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.dndStats.str" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>DEX</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.dndStats.dex" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>CON</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.dndStats.con" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>INT</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.dndStats.int" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>WIS</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.dndStats.wis" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>CHA</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.dndStats.cha" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>Gold</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.dndStats.gold" class="mb-input"></ion-input>
+              </div>
+            </div>
+          }
+
+          @if (rpgSystem === 'Cultivation' && character.rpgData.cultivationStats) {
+            <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="form-field" style="grid-column: span 2;">
+                <label>Realm</label>
+                <ion-input [(ngModel)]="character.rpgData.cultivationStats.realm" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>Stage (1-9)</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.cultivationStats.stage" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>Qi</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.cultivationStats.qi" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>Body Strength</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.cultivationStats.bodyStrength" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>Soul Strength</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.cultivationStats.soulStrength" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>Dao Comprehension</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.cultivationStats.daoComprehension" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>Spirit Stones</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.cultivationStats.spiritStones" class="mb-input"></ion-input>
+              </div>
+            </div>
+          }
+          
+          @if (character.rpgData.needs) {
+            <div class="mb-section-header" style="margin-top:20px;">
+              <span class="mb-section-title">Needs</span>
+            </div>
+            <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+              <div class="form-field">
+                <label>Hunger (0-100)</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.needs.hunger" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>Thirst (0-100)</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.needs.thirst" class="mb-input"></ion-input>
+              </div>
+              <div class="form-field">
+                <label>Rest (0-100)</label>
+                <ion-input type="number" [(ngModel)]="character.rpgData.needs.rest" class="mb-input"></ion-input>
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Greeting Messages -->
         <div class="form-section">
           <div class="mb-section-header">
             <span class="mb-section-title">Greeting Messages</span>
@@ -106,6 +241,25 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
                   <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
                 </ion-button>
               }
+            </div>
+          }
+        </div>
+        
+        <!-- Alternate Greetings (V2) -->
+        <div class="form-section">
+          <div class="mb-section-header">
+            <span class="mb-section-title">Alternate Greetings</span>
+            <ion-button fill="clear" size="small" (click)="addAlternateGreeting()">
+              <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+            </ion-button>
+          </div>
+          @for (g of character.alternateGreetings; track $index; let i = $index) {
+            <div class="greeting-row">
+              <ion-textarea [(ngModel)]="character.alternateGreetings![i]" placeholder="Alternate greeting (swipeable)..." rows="2" class="mb-input"></ion-textarea>
+              <ion-button fill="clear" size="small" color="danger"
+                (click)="removeAlternateGreeting(i)">
+                <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+              </ion-button>
             </div>
           }
         </div>
@@ -235,6 +389,10 @@ import { Character, createDefaultCharacter } from '../../../core/models/characte
     .tags-input-row ion-input {
       flex: 1;
     }
+    
+    .slider-row {
+      display: flex; align-items: center; gap: 12px; color: var(--mb-text-secondary);
+    }
 
     .tags-list {
       display: flex;
@@ -273,6 +431,8 @@ export class CharacterEditorPage implements OnInit {
   newTag = '';
   private characterId?: string;
 
+  @Input() rpgSystem?: 'D&D' | 'Cultivation' | 'None';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -280,7 +440,7 @@ export class CharacterEditorPage implements OnInit {
     private toastCtrl: ToastController,
     private modalCtrl: ModalController,
   ) {
-    addIcons({ saveOutline, closeOutline, addOutline, imageOutline, trashOutline, arrowBackOutline });
+    addIcons({ saveOutline, closeOutline, addOutline, imageOutline, trashOutline, arrowBackOutline, settingsOutline, textOutline, chatbubbleEllipsesOutline });
   }
 
   async ngOnInit(): Promise<void> {
@@ -294,6 +454,32 @@ export class CharacterEditorPage implements OnInit {
       const char = await this.characterService.getCharacter(this.characterId);
       if (char) {
         this.character = { ...char };
+      }
+    }
+
+    // Initialize RPG Data if a system is selected and data doesn't exist
+    this.onRpgSystemChange();
+  }
+
+  onRpgSystemChange(): void {
+    if (this.rpgSystem && this.rpgSystem !== 'None') {
+      if (!this.character.rpgData) {
+        this.character.rpgData = { 
+          inventory: [],
+          needs: { hunger: 100, thirst: 100, rest: 100 },
+          dispositions: {}
+        };
+      }
+      if (!this.character.rpgData.needs) {
+        this.character.rpgData.needs = { hunger: 100, thirst: 100, rest: 100 };
+      }
+      if (!this.character.rpgData.dispositions) {
+        this.character.rpgData.dispositions = {};
+      }
+      if (this.rpgSystem === 'D&D' && !this.character.rpgData.dndStats) {
+        this.character.rpgData.dndStats = { level: 1, hp: 10, maxHp: 10, mana: 0, maxMana: 0, str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, gold: 0 };
+      } else if (this.rpgSystem === 'Cultivation' && !this.character.rpgData.cultivationStats) {
+        this.character.rpgData.cultivationStats = { realm: 'Mortal', stage: 1, qi: 10, maxQi: 10, bodyStrength: 5, soulStrength: 5, daoComprehension: 1, spiritStones: 0 };
       }
     }
   }
@@ -328,6 +514,15 @@ export class CharacterEditorPage implements OnInit {
 
   removeGreeting(index: number): void {
     this.character.greetingMessages?.splice(index, 1);
+  }
+
+  addAlternateGreeting(): void {
+    if (!this.character.alternateGreetings) this.character.alternateGreetings = [];
+    this.character.alternateGreetings.push('');
+  }
+
+  removeAlternateGreeting(index: number): void {
+    this.character.alternateGreetings?.splice(index, 1);
   }
 
   addTag(): void {

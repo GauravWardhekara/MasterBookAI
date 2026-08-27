@@ -40,11 +40,40 @@ export interface LoreEntry extends BaseModel {
   linkedCharacterIds: string[];       // references to characters
 
   // Injection settings
-  insertionPosition: 'before-context' | 'after-context' | 'in-context';
+  insertionPosition: 'before-context' | 'after-context' | 'in-context' | 'before_char' | 'after_char' | 'before_example' | 'after_example' | 'ANDepth';
   scanDepth: number;                  // how far back in history to scan for triggers
   probability: number;                // 0-1, chance of injection when triggered
   isRecursive: boolean;               // whether this entry can trigger other entries
   isEnabled: boolean;
+
+  // ── SillyTavern World Info Advanced Fields ──
+
+  // Secondary trigger keys with selective logic
+  keySecondary?: string[];            // secondary trigger keys (AND/NOT logic)
+  selectiveLogic?: 'AND_ANY' | 'AND_ALL' | 'NOT_ANY' | 'NOT_ALL';
+
+  // Ordering & positioning
+  order?: number;                     // manual sort order for injection priority
+  depth?: number;                     // context depth for ANDepth position
+
+  // Group-based mutual exclusion
+  group?: string;                     // group name — only highest-weight entry per group is injected
+  groupOverride?: boolean;            // override group priority rules
+  groupWeight?: number;               // weight within group (higher = more likely)
+
+  // Special injection modes
+  constant?: boolean;                 // always inject regardless of triggers
+  preventRecursion?: boolean;         // prevent recursive activation from this entry
+  excludeRecursion?: boolean;         // exclude from recursive scans
+  useProbability?: boolean;           // flag to enable probability-based injection
+
+  // Token management
+  tokenBudget?: number;               // max tokens this entry can consume
+
+  // Author metadata (not sent to AI)
+  comment?: string;                   // author-facing notes
+  automationId?: string;              // for conditional logic / state tracking
+  vectorized?: boolean;               // has been embedded for vector search
 }
 
 /**
@@ -87,5 +116,14 @@ export function createDefaultLoreEntry(lorebookId: string): Partial<LoreEntry> {
     probability: 1.0,
     isRecursive: false,
     isEnabled: true,
+    // SillyTavern defaults
+    keySecondary: [],
+    selectiveLogic: 'AND_ANY',
+    order: 100,
+    constant: false,
+    preventRecursion: false,
+    excludeRecursion: false,
+    useProbability: false,
+    vectorized: false,
   };
 }

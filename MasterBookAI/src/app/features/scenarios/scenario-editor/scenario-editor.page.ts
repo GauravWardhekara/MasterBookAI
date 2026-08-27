@@ -14,6 +14,7 @@ import {
 } from 'ionicons/icons';
 import { ScenarioService } from '../../../core/services/scenario.service';
 import { Scenario, createDefaultScenario } from '../../../core/models/scenario.model';
+import { GENRE_PRESETS } from '../../../core/data/genre-presets.data';
 
 @Component({
   selector: 'app-scenario-editor',
@@ -253,6 +254,58 @@ import { Scenario, createDefaultScenario } from '../../../core/models/scenario.m
             [maxlength]="1000"
           ></ion-textarea>
         </div>
+
+        <!-- Genre / Role -->
+        <div class="form-field">
+          <div class="field-header">
+            <label>Genre</label>
+          </div>
+          <p class="field-desc">Select the primary genre for this scenario to guide the AI's narrative style.</p>
+          <select [(ngModel)]="scenario.genre" class="mb-select" (change)="onGenreChange()">
+            <option value="" disabled>Select a genre...</option>
+            @for (genre of genres; track genre.id) {
+              <option [value]="genre.id">{{ genre.name }}</option>
+            }
+          </select>
+        </div>
+
+        @if (selectedGenreObj) {
+          <div class="form-field">
+            <div class="field-header">
+              <label>Your Role</label>
+            </div>
+            <p class="field-desc">Select a preset role for yourself, or leave it blank to define your own.</p>
+            <select [(ngModel)]="scenario.userRole" class="mb-select">
+              <option value="">Custom Role...</option>
+              @for (role of selectedGenreObj.roles; track role) {
+                <option [value]="role">{{ role }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- ── RPG Mechanics ── -->
+        <div class="form-field">
+          <div class="field-header">
+            <label>Enable RPG Mechanics</label>
+            <ion-toggle [(ngModel)]="scenario.isRpgModeEnabled"></ion-toggle>
+          </div>
+          <p class="field-desc">When enabled, unlocks dice rolls, stats, inventory, and structured RPG elements for this scenario.</p>
+        </div>
+
+        @if (scenario.isRpgModeEnabled) {
+          <div class="form-field">
+            <div class="field-header">
+              <label>RPG System</label>
+            </div>
+            <p class="field-desc">Select the rule system to use. This determines the available stats and mechanics.</p>
+            <select [(ngModel)]="scenario.rpgSystem" class="mb-select">
+              <option value="D&D">Standard D&D</option>
+              <option value="Cultivation">Cultivation (Xianxia)</option>
+              <option value="None">None / Freeform</option>
+            </select>
+          </div>
+        }
 
         <!-- NSFW Toggle -->
         <div class="nsfw-section">
@@ -608,6 +661,14 @@ import { Scenario, createDefaultScenario } from '../../../core/models/scenario.m
     ion-input.mb-input, ion-textarea.mb-input {
       margin-top: 0;
     }
+    
+    .mb-select {
+      width: 100%; padding: 12px 14px;
+      background: var(--mb-bg-input); color: var(--mb-text-primary);
+      border: 1px solid var(--mb-border); border-radius: var(--mb-radius-md);
+      font-size: 14px; outline: none; margin-top: 4px;
+    }
+    .mb-select:focus { border-color: var(--mb-border-focus); }
   `],
   imports: [
     CommonModule, FormsModule,
@@ -620,6 +681,12 @@ export class ScenarioEditorPage implements OnInit {
   isEditing = false;
   showImport = false;
   importJson = '';
+  
+  genres = GENRE_PRESETS;
+
+  get selectedGenreObj() {
+     return this.genres.find(g => g.id === this.scenario.genre);
+  }
 
   exampleDialoguePlaceholder =
     `"You really think you can just walk in here and ask me that?"\n*leans back, smirking* "Fine. But you owe me, and I always collect."\n"Don't. Don't you dare say her name to me."`;
@@ -656,6 +723,11 @@ export class ScenarioEditorPage implements OnInit {
 
   toggleImportSection(): void {
     this.showImport = !this.showImport;
+  }
+  
+  onGenreChange(): void {
+     // Optional: reset role if genre changes
+     this.scenario.userRole = '';
   }
 
   // ── Image Upload ──

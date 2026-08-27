@@ -3,6 +3,8 @@ import { Capacitor } from '@capacitor/core';
 import { DatabaseService } from './database.service';
 import { ConnectionProfile } from '../models/connection-profile.model';
 import { generateId, now } from '../models/base.model';
+import { BehaviorSubject, Subscription, timer, from, of } from 'rxjs';
+import { catchError, switchMap, timeout, retryWhen, delay } from 'rxjs/operators';
 
 /**
  * Service for managing LLM connection profiles.
@@ -10,7 +12,44 @@ import { generateId, now } from '../models/base.model';
  */
 @Injectable({ providedIn: 'root' })
 export class ConnectionService {
-  constructor(private db: DatabaseService) {}
+  private healthCheckSub?: Subscription;
+  
+  // Connection status observables
+  private isConnectedSubject = new BehaviorSubject<boolean>(false);
+  public isConnected$ = this.isConnectedSubject.asObservable();
+  
+  private activeProfileSubject = new BehaviorSubject<ConnectionProfile | undefined>(undefined);
+  public activeProfile$ = this.activeProfileSubject.asObservable();
+
+  constructor(private db: DatabaseService) {
+    this.startHealthCheckLoop();
+  }
+
+  /**
+   * Background loop to periodically check connection health.
+   */
+  private startHealthCheckLoop(): void {
+    if (this.healthCheckSub) this.healthCheckSub.unsubscribe();
+    
+    // Check every 30 seconds
+    this.healthCheckSub = timer(0, 30000).pipe(
+      switchMap(() => from(this.getDefaultProfile())),
+      switchMap(profile => {
+        if (!profile) return of(false);
+        this.activeProfileSubject.next(profile);
+        return from(this.testConnection(profile)).pipe(
+          switchMap(() => of(true)),
+          catchError(() => of(false))
+        );
+      })
+    ).subscribe(isHealthy => {
+      this.isConnectedSubject.next(isHealthy);
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.healthCheckSub) this.healthCheckSub.unsubscribe();
+  }
 
   async getAllProfiles(): Promise<ConnectionProfile[]> {
     return this.db.connectionProfiles.orderBy('name').toArray();
@@ -71,6 +110,7 @@ export class ConnectionService {
     }
 
     await this.db.connectionProfiles.add(profile);
+    this.startHealthCheckLoop(); // Trigger immediate health check
     return profile;
   }
 
@@ -79,6 +119,7 @@ export class ConnectionService {
       await this.db.connectionProfiles.where('isDefault').equals(1).modify({ isDefault: false });
     }
     await this.db.connectionProfiles.update(id, { ...data, updatedAt: now() });
+    if (data.isDefault) this.startHealthCheckLoop();
   }
 
   async deleteProfile(id: string): Promise<void> {

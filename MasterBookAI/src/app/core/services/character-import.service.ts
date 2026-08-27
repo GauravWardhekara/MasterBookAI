@@ -14,6 +14,7 @@ export interface CharCardV2 {
     first_mes?: string;
     mes_example?: string;
     system_prompt?: string;
+    post_history_instructions?: string;
     creator_notes?: string;
     tags?: string[];
     alternate_greetings?: string[];
@@ -79,10 +80,14 @@ export class CharacterImportService {
       personality: data.personality?.trim() || '',
       speechStyle: '',
       greetingMessages: greetings.length > 0 ? greetings : [''],
+      alternateGreetings: isV2 ? ((json as CharCardV2).data.alternate_greetings || []) : [],
       exampleDialogues,
       tags: data.tags || [],
       isPlayable: false,
       linkedLoreEntryIds: [],
+      systemPrompt: (data as any).system_prompt || '',
+      postHistoryInstructions: (data as any).post_history_instructions || '',
+      creatorNotes: (data as any).creator_notes || '',
     };
   }
 
@@ -114,6 +119,7 @@ export class CharacterImportService {
         mes_example: definition.example_dialogues,
         tags: apiData?.node?.topics || [],
         system_prompt: definition.system_prompt,
+        post_history_instructions: definition.post_history_instructions,
         creator_notes: definition.creator_notes,
         alternate_greetings: definition.alternate_greetings || [],
       }

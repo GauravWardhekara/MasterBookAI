@@ -34,6 +34,7 @@
     "@ionic/angular": "^8.0.0",
     "@mlc-ai/web-llm": "^0.2.84",
     "dexie": "^4.4.4",
+    "docx": "^9.7.1",
     "ionicons": "^7.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",

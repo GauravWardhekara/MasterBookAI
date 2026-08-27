@@ -24,6 +24,12 @@ export interface ChatSession extends BaseModel {
   activePresetId?: string;
   activeSystemPrompt?: string;
   activeSamplingOverrides?: SamplingOverrides;
+
+  // Story statistics (Dungeo-ai /stats)
+  stats?: StoryStats;
+
+  // Save slots for checkpoints (Dungeo-ai /save /load)
+  saveSlots?: SaveSlot[];
 }
 
 /**
@@ -39,6 +45,13 @@ export interface Message {
   generatedImageRefs: string[];
   isPinnedAsMemory: boolean;
   tokenCount: number;
+
+  // Swipe alternates (SillyTavern feature)
+  alternates?: string[];
+  activeAlternateIndex?: number;
+
+  // Action classification (Dungeo-ai adventure mode)
+  actionType?: 'direction' | 'action' | 'dialogue' | 'continue';
 }
 
 /**
@@ -53,6 +66,35 @@ export interface Memory extends BaseModel {
   linkedScenarioId?: string;
   linkedChatSessionId?: string;
   decayFactor: number;
+}
+
+/**
+ * A named save slot / checkpoint within a story session.
+ * Inspired by Dungeo-ai's /save and /load commands.
+ */
+export interface SaveSlot {
+  name: string;
+  messagesSnapshot: Message[];
+  savedAt: string;
+  wordCount: number;
+}
+
+/**
+ * Statistics tracked per story session.
+ * Inspired by Dungeo-ai's /stats command.
+ */
+export interface StoryStats {
+  totalWords: number;
+  totalTurns: number;
+  aiWords: number;
+  userDirections: number;
+  playTimeMinutes: number;
+  startedAt: string;
+  lastPlayedAt: string;
+  genre?: string;
+  role?: string;
+  undoCount: number;
+  regenCount: number;
 }
 
 /**

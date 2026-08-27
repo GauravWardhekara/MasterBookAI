@@ -3,13 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
+  IonHeader, IonToolbar, IonContent, IonButton, IonIcon,
   IonButtons, IonBackButton, AlertController, ToastController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   arrowBackOutline, playOutline, chatbubblesOutline, peopleOutline, 
-  libraryOutline, starOutline, ellipsisHorizontalOutline
+  libraryOutline, starOutline, ellipsisHorizontalOutline, warningOutline
 } from 'ionicons/icons';
 
 import { ScenarioService } from '../../../core/services/scenario.service';
@@ -33,7 +33,7 @@ import { ChatSession } from '../../../core/models/chat-session.model';
       <ion-header class="ion-no-border transparent-header">
         <ion-toolbar class="transparent-toolbar">
           <ion-buttons slot="start">
-            <ion-back-button defaultHref="/scenarios" text="" icon="arrow-back-outline" class="circle-btn"></ion-back-button>
+            <ion-back-button [defaultHref]="getDefaultHref()" text="" icon="arrow-back-outline" class="circle-btn"></ion-back-button>
           </ion-buttons>
           <ion-buttons slot="end">
             <ion-button class="circle-btn">
@@ -64,6 +64,12 @@ import { ChatSession } from '../../../core/models/chat-session.model';
 
           <!-- Info Card -->
           <div class="info-card mb-glass-card">
+            
+            <div *ngIf="scenario.contentWarning" class="content-warning">
+              <ion-icon name="warning-outline"></ion-icon>
+              <span>{{ scenario.contentWarning }}</span>
+            </div>
+
             <div class="info-header">
               <h1 class="info-title">{{ scenario.title }}</h1>
             </div>
@@ -71,19 +77,19 @@ import { ChatSession } from '../../../core/models/chat-session.model';
             <div class="info-stats">
               <span class="stat-item"><ion-icon name="chatbubblesOutline"></ion-icon> {{ sessions.length }} Chats</span>
               <span class="stat-item"><ion-icon name="peopleOutline"></ion-icon> {{ characters.length }} Characters</span>
-              <span class="stat-item"><ion-icon name="libraryOutline"></ion-icon> {{ scenario.lorebookIds?.length || 0 }} Lorebooks</span>
+              <span class="stat-item"><ion-icon name="libraryOutline"></ion-icon> {{ scenario.lorebookIds.length || 0 }} Lorebooks</span>
             </div>
 
             <div class="info-tags">
-              <span class="mb-badge" [class.mb-badge-premise]="scenario.defaultMode === 'story'" [class.mb-badge-memory]="scenario.defaultMode === 'chat'">
-                {{ scenario.defaultMode | uppercase }}
-              </span>
+              <span *ngIf="scenario.genre" class="mb-badge mb-badge-premise">{{ scenario.genre | uppercase }}</span>
+              <span *ngIf="scenario.isNsfw" class="mb-badge" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444;">NSFW</span>
               @for (tag of (scenario.tags || []).slice(0, 4); track tag) {
                 <span class="mb-chip">{{ tag | uppercase }}</span>
               }
             </div>
 
             <div class="info-desc">
+              <p *ngIf="scenario.summary" style="font-weight: 600; margin-bottom: 8px;">{{ scenario.summary }}</p>
               {{ scenario.description }}
             </div>
 
@@ -97,12 +103,12 @@ import { ChatSession } from '../../../core/models/chat-session.model';
               <!-- Start / Continue Chat Buttons -->
               @if (sessions.length === 0) {
                 <ion-button class="start-btn mb-btn-primary" (click)="startNewChat()">
-                  Start Chatting
+                  Play World
                 </ion-button>
               } @else {
                 <div class="split-actions">
                   <ion-button fill="clear" class="new-chat-btn" (click)="startNewChat()">
-                    New Chat
+                    New Run
                   </ion-button>
                   <ion-button class="start-btn mb-btn-primary" (click)="continueChat()">
                     Continue
@@ -331,7 +337,7 @@ import { ChatSession } from '../../../core/models/chat-session.model';
   `],
   imports: [
     CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonIcon,
+    IonHeader, IonToolbar, IonContent, IonButton, IonIcon,
     IonButtons, IonBackButton
   ],
   standalone: true
@@ -390,6 +396,10 @@ export class ScenarioDetailPage implements OnInit {
 
     const defaultProfile = await this.connectionService.getDefaultProfile();
     this.selectedModel = defaultProfile?.modelList?.[0] || this.allModels[0] || '';
+  }
+
+  getDefaultHref(): string {
+    return this.scenario?.type === 'world' ? '/worlds' : '/scenarios';
   }
 
   getBackgroundImage(): string {

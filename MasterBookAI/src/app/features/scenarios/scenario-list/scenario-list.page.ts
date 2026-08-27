@@ -27,8 +27,8 @@ import { Lorebook } from '../../../core/models/lorebook.model';
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>Worlds</ion-title>
-        <ion-button slot="end" fill="clear" (click)="navigateTo('/scenarios/new')">
+        <ion-title>{{ title }}</ion-title>
+        <ion-button slot="end" fill="clear" (click)="navigateTo(baseRoute + '/new')">
           <ion-icon slot="icon-only" name="add-outline"></ion-icon>
         </ion-button>
       </ion-toolbar>
@@ -36,7 +36,7 @@ import { Lorebook } from '../../../core/models/lorebook.model';
         <ion-searchbar
           [(ngModel)]="searchQuery"
           (ionInput)="onSearch()"
-          placeholder="Search worlds..."
+          [placeholder]="'Search ' + title.toLowerCase() + '...'"
           class="mb-input"
         ></ion-searchbar>
       </ion-toolbar>
@@ -45,12 +45,12 @@ import { Lorebook } from '../../../core/models/lorebook.model';
     <ion-content class="ion-padding">
       @if (scenarios.length === 0) {
         <div class="mb-empty-state">
-          <ion-icon name="book-outline"></ion-icon>
-          <h3>No Worlds Yet</h3>
-          <p>Create a world with characters and lorebooks to start your adventure</p>
-          <ion-button class="mb-btn-primary" (click)="navigateTo('/scenarios/new')">
+          <ion-icon [name]="type === 'world' ? 'book-outline' : 'person-outline'"></ion-icon>
+          <h3>{{ emptyStateTitle }}</h3>
+          <p>{{ emptyStateDesc }}</p>
+          <ion-button class="mb-btn-primary" (click)="navigateTo(baseRoute + '/new')">
             <ion-icon slot="start" name="add-outline"></ion-icon>
-            Create World
+            {{ emptyStateBtn }}
           </ion-button>
         </div>
       }
@@ -61,7 +61,7 @@ import { Lorebook } from '../../../core/models/lorebook.model';
             <div
               class="scenario-card mb-glass-card mb-fade-in"
               [style.animation-delay]="(i * 0.05) + 's'"
-              (click)="navigateTo('/scenarios/' + s.id)">
+              (click)="navigateTo(baseRoute + '/' + s.id)">
               @if (s.coverImage) {
                 <div class="sc-cover">
                   <img [src]="s.coverImage" alt="" />
@@ -176,6 +176,13 @@ import { Lorebook } from '../../../core/models/lorebook.model';
 export class ScenarioListPage implements OnInit {
   scenarios: Scenario[] = [];
   searchQuery = '';
+  
+  type: 'world' | 'scenario' = 'world';
+  title = 'Worlds';
+  baseRoute = '/worlds';
+  emptyStateTitle = 'No Worlds Yet';
+  emptyStateDesc = 'Create a world with characters and lorebooks to start your adventure';
+  emptyStateBtn = 'Create World';
 
   constructor(
     private router: Router,
@@ -192,6 +199,14 @@ export class ScenarioListPage implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    if (this.router.url.includes('/scenarios')) {
+      this.type = 'scenario';
+      this.title = 'Scenarios';
+      this.baseRoute = '/scenarios';
+      this.emptyStateTitle = 'No Scenarios Yet';
+      this.emptyStateDesc = 'Create a solo character scenario to start your adventure';
+      this.emptyStateBtn = 'Create Scenario';
+    }
     await this.loadScenarios();
   }
 
@@ -200,12 +215,12 @@ export class ScenarioListPage implements OnInit {
   }
 
   async loadScenarios(): Promise<void> {
-    this.scenarios = await this.scenarioService.getAllScenarios();
+    this.scenarios = await this.scenarioService.getAllScenarios(this.type);
   }
 
   async onSearch(): Promise<void> {
     if (this.searchQuery.trim()) {
-      this.scenarios = await this.scenarioService.searchScenarios(this.searchQuery);
+      this.scenarios = await this.scenarioService.searchScenarios(this.searchQuery, this.type);
     } else {
       await this.loadScenarios();
     }
@@ -213,7 +228,7 @@ export class ScenarioListPage implements OnInit {
 
   editScenario(s: Scenario, event: Event): void {
     event.stopPropagation();
-    this.navigateTo(`/scenarios/${s.id}/edit`);
+    this.navigateTo(`${this.baseRoute}/${s.id}/edit`);
   }
 
   async confirmDelete(s: Scenario, event: Event): Promise<void> {

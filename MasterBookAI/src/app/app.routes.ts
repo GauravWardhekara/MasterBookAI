@@ -10,6 +10,26 @@ export const routes: Routes = [
         loadComponent: () => import('./features/home/home.page').then(m => m.HomePage),
       },
       {
+        path: 'worlds',
+        loadComponent: () => import('./features/scenarios/scenario-list/scenario-list.page').then(m => m.ScenarioListPage),
+      },
+      {
+        path: 'worlds/new',
+        loadComponent: () => import('./features/worlds/world-dashboard/world-dashboard.component').then(m => m.WorldDashboardComponent),
+      },
+      {
+        path: 'worlds/:id/edit',
+        loadComponent: () => import('./features/worlds/world-dashboard/world-dashboard.component').then(m => m.WorldDashboardComponent),
+      },
+      {
+        path: 'worlds/:id/basics',
+        loadComponent: () => import('./features/worlds/world-basics/world-basics.component').then(m => m.WorldBasicsComponent),
+      },
+      {
+        path: 'worlds/:id/story',
+        loadComponent: () => import('./features/worlds/world-story/world-story.component').then(m => m.WorldStoryComponent),
+      },
+      {
         path: 'scenarios',
         loadComponent: () => import('./features/scenarios/scenario-list/scenario-list.page').then(m => m.ScenarioListPage),
       },
@@ -75,6 +95,10 @@ export const routes: Routes = [
   {
     path: 'story/:sessionId',
     loadComponent: () => import('./features/story-mode/story-mode.page').then(m => m.StoryModePage),
+  },
+  {
+    path: 'worlds/:id',
+    loadComponent: () => import('./features/scenarios/scenario-detail/scenario-detail.page').then(m => m.ScenarioDetailPage),
   },
   {
     path: 'scenarios/:id',

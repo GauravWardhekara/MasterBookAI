@@ -13,7 +13,7 @@ import {
   createOutline, trashOutline, arrowUndoOutline, playForwardOutline,
   ellipsisVerticalOutline, bookOutline, sparklesOutline,
   chevronUpOutline, chevronDownOutline, saveOutline, documentTextOutline,
-  bookmarkOutline, bulbOutline, imageOutline
+  bookmarkOutline, bulbOutline, imageOutline, statsChartOutline, mapOutline
 } from 'ionicons/icons';
 import { ChatSessionService } from '../../core/services/chat-session.service';
 import { ScenarioService } from '../../core/services/scenario.service';
@@ -22,6 +22,7 @@ import { LorebookService } from '../../core/services/lorebook.service';
 import { ConnectionService } from '../../core/services/connection.service';
 import { LLMProviderService } from '../../core/services/llm-provider.service';
 import { PromptAssemblyService } from '../../core/services/prompt-assembly.service';
+import { RpgResolutionService } from '../../core/services/rpg-resolution.service';
 import { ChatSession, Message } from '../../core/models/chat-session.model';
 import { Scenario } from '../../core/models/scenario.model';
 import { Character, Persona } from '../../core/models/character.model';
@@ -31,6 +32,8 @@ import { generateId, now } from '../../core/models/base.model';
 import { FileIOService } from '../../core/services/file-io.service';
 import { MemoryService } from '../../core/services/memory.service';
 import { ChatSetupModalComponent } from '../../shared/components/chat-setup-modal/chat-setup-modal.component';
+import { RpgSheetModalComponent } from '../../shared/components/rpg-sheet-modal/rpg-sheet-modal.component';
+import { WorldMapModalComponent } from '../../shared/components/world-map-modal/world-map-modal.component';
 
 @Component({
   selector: 'app-story-mode',
@@ -49,6 +52,14 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
           </span>
         </ion-title>
         <ion-buttons slot="end">
+          @if (scenario?.isRpgModeEnabled) {
+            <ion-button (click)="openWorldMap()" title="World Map">
+              <ion-icon slot="icon-only" name="map-outline"></ion-icon>
+            </ion-button>
+            <ion-button (click)="openRpgSheet()" title="RPG Character Sheet">
+              <ion-icon slot="icon-only" name="stats-chart-outline"></ion-icon>
+            </ion-button>
+          }
           <ion-button (click)="openChatSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
@@ -234,6 +245,17 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
                             <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
                           </ion-button>
                         }
+                        @if (block.alternates && block.alternates.length > 1) {
+                          <div class="swipe-controls">
+                             <ion-button fill="clear" size="small" (click)="swipeAlternate(block, -1)">
+                               &lt;
+                             </ion-button>
+                             <span class="swipe-indicator">{{ (block.activeAlternateIndex || 0) + 1 }}/{{ block.alternates.length }}</span>
+                             <ion-button fill="clear" size="small" (click)="swipeAlternate(block, 1)">
+                               &gt;
+                             </ion-button>
+                          </div>
+                        }
                         <ion-button fill="clear" size="small" (click)="pinBlockAsMemory(block)" title="Pin as Memory"
                           [color]="block.isPinnedAsMemory ? 'warning' : undefined">
                           <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
@@ -281,6 +303,14 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
     
     @if (session) {
       <ion-footer>
+        @if (!isStreaming) {
+           <div class="quick-settings-bar">
+             <span class="qs-label">Temp: {{ session.activeSamplingOverrides?.temperature || connectionProfile?.defaultSampling?.temperature || 0.8 | number:'1.1-2' }}</span>
+             <input type="range" class="qs-slider" min="0" max="2" step="0.1" 
+                    [ngModel]="session.activeSamplingOverrides?.temperature || connectionProfile?.defaultSampling?.temperature || 0.8" 
+                    (ngModelChange)="updateTemperature($event)">
+           </div>
+        }
         <ion-toolbar class="story-input-toolbar">
           <div class="story-input-area">
             <textarea #storyInput
@@ -621,6 +651,14 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
       --background: var(--mb-bg-secondary);
       --border-color: var(--mb-border);
     }
+    .quick-settings-bar {
+      display: flex; align-items: center; gap: 8px; padding: 4px 16px;
+      background: var(--mb-bg-secondary); border-top: 1px solid var(--mb-border);
+      font-size: 11px; color: var(--mb-text-muted);
+    }
+    .qs-slider {
+      flex: 1; max-width: 150px;
+    }
     .story-input-area {
       display: flex; align-items: flex-end; gap: 8px;
       padding: 8px 12px;
@@ -702,6 +740,7 @@ export class StoryModePage implements OnInit {
     private actionSheetCtrl: ActionSheetController,
     private fileIOService: FileIOService,
     private memoryService: MemoryService,
+    private rpgResolutionService: RpgResolutionService,
     private modalCtrl: ModalController,
   ) {
     addIcons({
@@ -709,7 +748,7 @@ export class StoryModePage implements OnInit {
       createOutline, trashOutline, arrowUndoOutline, playForwardOutline,
       ellipsisVerticalOutline, bookOutline, sparklesOutline,
       chevronUpOutline, chevronDownOutline, saveOutline, documentTextOutline,
-      bookmarkOutline, bulbOutline, imageOutline
+      bookmarkOutline, bulbOutline, imageOutline, statsChartOutline, mapOutline
     });
   }
 
@@ -803,18 +842,42 @@ export class StoryModePage implements OnInit {
    */
   async submitUserText(): Promise<void> {
     if (!this.inputText.trim() || !this.session) return;
+    
+    // Check for slash commands
+    let text = this.inputText.trim();
+    if (text.startsWith('/')) {
+       const handled = await this.handleSlashCommand(text);
+       if (handled) {
+          this.inputText = '';
+          return;
+       }
+    }
+
+    let systemInjectedAction: string | undefined = undefined;
+
+    // Check for RPG actions
+    if (text.startsWith('!') && this.scenario?.isRpgModeEnabled) {
+      const resolution = this.rpgResolutionService.resolveAction(text, this.scenario, this.activePersona);
+      text = resolution.actionText; // Store the stripped action text as user input
+      systemInjectedAction = resolution.systemInjectedText;
+    }
 
     const userBlock: Message = {
       id: generateId(),
       role: 'user',
       senderId: this.persona?.id || 'user',
       senderName: this.persona?.name || 'Author',
-      content: this.inputText.trim(),
+      content: text,
       timestamp: now(),
       generatedImageRefs: [],
       isPinnedAsMemory: false,
-      tokenCount: Math.ceil(this.inputText.trim().length / 4),
+      tokenCount: Math.ceil(text.length / 4),
     };
+
+    if (systemInjectedAction) {
+       // Append the system injection instructions onto the user's message
+       userBlock.content += `\n\n${systemInjectedAction}`;
+    }
 
     this.session.messages.push(userBlock);
     this.inputText = '';
@@ -827,6 +890,11 @@ export class StoryModePage implements OnInit {
 
   async generateContinuation(): Promise<void> {
     if (!this.session || !this.connectionProfile) return;
+
+    // Advance RPG Turn (Needs decrement)
+    if (this.scenario?.isRpgModeEnabled) {
+      this.rpgResolutionService.advanceTurn(this.activePersona);
+    }
 
     // If there's unsaved direction text in the input, save it first
     if (this.inputText.trim()) {
@@ -850,7 +918,15 @@ export class StoryModePage implements OnInit {
     this.streamingContent = '';
 
     try {
-      const storySystemPrompt = this.buildStorySystemPrompt();
+      let storySystemPrompt = this.buildStorySystemPrompt();
+      
+      // Inject RPG Needs warnings if applicable
+      if (this.scenario?.isRpgModeEnabled) {
+        const needsPrompt = this.rpgResolutionService.getNeedsSystemPrompt(this.activePersona);
+        if (needsPrompt) {
+          storySystemPrompt += `\n\n${needsPrompt}`;
+        }
+      }
 
       const assembled = await this.promptAssembly.assemble(
         this.scenario!,
@@ -893,21 +969,23 @@ export class StoryModePage implements OnInit {
         this.streamingContent = await this.llmProvider.complete(llmMessages, llmOptions, this.connectionProfile);
       }
 
-      if (this.streamingContent.trim()) {
-        const aiBlock: Message = {
-          id: generateId(),
-          role: 'assistant',
-          senderId: 'narrator',
-          senderName: 'Narrator',
-          content: this.streamingContent.trim(),
-          timestamp: now(),
-          generatedImageRefs: [],
-          isPinnedAsMemory: false,
-          tokenCount: Math.ceil(this.streamingContent.trim().length / 4),
-        };
-        this.session.messages.push(aiBlock);
-        await this.saveSession();
-      }
+        if (this.streamingContent.trim()) {
+          const aiBlock: Message = {
+            id: generateId(),
+            role: 'assistant',
+            senderId: 'narrator',
+            senderName: 'Narrator',
+            content: this.streamingContent.trim(),
+            timestamp: now(),
+            generatedImageRefs: [],
+            isPinnedAsMemory: false,
+            tokenCount: Math.ceil(this.streamingContent.trim().length / 4),
+            alternates: [this.streamingContent.trim()],
+            activeAlternateIndex: 0,
+          };
+          this.session.messages.push(aiBlock);
+          await this.saveSession();
+        }
     } catch (error: any) {
       const toast = await this.toastCtrl.create({
         message: `Error: ${error.message}`, duration: 4000, color: 'danger',
@@ -975,10 +1053,73 @@ export class StoryModePage implements OnInit {
 
     const lastMsg = this.session.messages[this.session.messages.length - 1];
     if (lastMsg.role === 'assistant') {
-      this.session.messages.pop();
-      await this.saveSession();
-      await this.generateContinuation();
+      // Instead of popping, we just generate and add as an alternate
+      this.isStreaming = true;
+      this.streamingContent = '';
+      
+      // Temporarily remove last message for context assembly
+      const tempMessages = [...this.session.messages];
+      tempMessages.pop();
+
+      try {
+        const assembled = await this.promptAssembly.assemble(
+          this.scenario!, this.persona!, this.activeCharacters,
+          tempMessages, this.lorebooks, this.connectionProfile!.contextSize
+        );
+        const llmMessages = this.llmProvider.convertMessages(
+          assembled.messages, this.buildStorySystemPrompt(), this.connectionProfile!.promptTemplate
+        );
+        
+        // Bump temp slightly for variety on redo
+        const baseTemp = this.session.activeSamplingOverrides?.temperature ?? this.connectionProfile!.defaultSampling?.temperature ?? 0.8;
+        const llmOptions = {
+           model: this.session.activeModel || this.activeModel,
+           temperature: Math.min(baseTemp + 0.1, 2.0),
+        };
+
+        if (this.connectionProfile!.streamingEnabled) {
+          for await (const chunk of this.llmProvider.stream(llmMessages, llmOptions, this.connectionProfile!)) {
+            if (chunk.done) break;
+            this.ngZone.run(() => { this.streamingContent += chunk.content; });
+            this.scrollToBottom();
+          }
+        } else {
+          this.streamingContent = await this.llmProvider.complete(llmMessages, llmOptions, this.connectionProfile!);
+        }
+
+        if (this.streamingContent.trim()) {
+          const newContent = this.streamingContent.trim();
+          if (!lastMsg.alternates) lastMsg.alternates = [lastMsg.content];
+          lastMsg.alternates.push(newContent);
+          lastMsg.activeAlternateIndex = lastMsg.alternates.length - 1;
+          lastMsg.content = newContent;
+          await this.saveSession();
+        }
+      } catch (e: any) {
+        // ... error handling
+      } finally {
+        this.isStreaming = false;
+        this.streamingContent = '';
+      }
     }
+  }
+
+  swipeAlternate(block: Message, direction: number): void {
+     if (!block.alternates || block.alternates.length < 2) return;
+     let idx = (block.activeAlternateIndex || 0) + direction;
+     if (idx < 0) idx = block.alternates.length - 1;
+     if (idx >= block.alternates.length) idx = 0;
+     
+     block.activeAlternateIndex = idx;
+     block.content = block.alternates[idx];
+     this.saveSession();
+  }
+
+  updateTemperature(val: number): void {
+     if (!this.session) return;
+     if (!this.session.activeSamplingOverrides) this.session.activeSamplingOverrides = {};
+     this.session.activeSamplingOverrides.temperature = val;
+     this.saveSession();
   }
 
   async editBlock(index: number): Promise<void> {
@@ -1009,7 +1150,33 @@ export class StoryModePage implements OnInit {
     await alert.present();
   }
 
-  // ── Chat Settings ──
+  // ── Chat Settings & Modals ──
+
+  async openWorldMap(): Promise<void> {
+    if (!this.scenario || !this.scenario.isRpgModeEnabled) return;
+    
+    const modal = await this.modalCtrl.create({
+      component: WorldMapModalComponent,
+      componentProps: {
+        lorebooks: this.activeLorebooks
+      }
+    });
+    await modal.present();
+  }
+
+  async openRpgSheet(): Promise<void> {
+    if (!this.scenario || !this.scenario.isRpgModeEnabled) return;
+    
+    const modal = await this.modalCtrl.create({
+      component: RpgSheetModalComponent,
+      componentProps: {
+        rpgSystem: this.scenario.rpgSystem,
+        persona: this.activePersona,
+        characters: this.activeCharacters
+      }
+    });
+    await modal.present();
+  }
 
   async openChatSettings(): Promise<void> {
     if (!this.session) return;
@@ -1047,6 +1214,11 @@ export class StoryModePage implements OnInit {
           text: 'Rename Story',
           icon: 'create-outline',
           handler: () => this.renameStory(),
+        },
+        {
+          text: 'Export as DOCX',
+          icon: 'document-text-outline',
+          handler: () => this.exportStoryDOCX(),
         },
         {
           text: 'Export as Text',
@@ -1119,6 +1291,19 @@ export class StoryModePage implements OnInit {
 
     const toast = await this.toastCtrl.create({ message: 'Story exported!', duration: 2000, color: 'success' });
     await toast.present();
+  }
+
+  async exportStoryDOCX(): Promise<void> {
+    if (!this.session) return;
+    try {
+      const blob = await this.fileIOService.exportStoryAsDOCX(this.session.id);
+      this.fileIOService.downloadFile(blob, `${(this.session.title || 'story').replace(/\s+/g, '_')}.docx`);
+      const toast = await this.toastCtrl.create({ message: 'DOCX exported successfully!', duration: 2000, color: 'success' });
+      await toast.present();
+    } catch (e: any) {
+      const toast = await this.toastCtrl.create({ message: `Export failed: ${e.message}`, duration: 3000, color: 'danger' });
+      await toast.present();
+    }
   }
 
   async saveStoryAsFile(): Promise<void> {
@@ -1379,5 +1564,80 @@ IMPORTANT: Messages from the user are author directions — they guide what shou
         this.session = updated;
       }
     }
+  // ── Slash Commands ──
+  
+  private async handleSlashCommand(command: string): Promise<boolean> {
+     const parts = command.trim().split(/\s+/);
+     const cmd = parts[0].toLowerCase();
+     
+     switch (cmd) {
+        case '/redo':
+           await this.regenerateLastBlock();
+           return true;
+           
+        case '/save':
+           const saveSlotName = parts.slice(1).join(' ') || `Save ${new Date().toLocaleTimeString()}`;
+           if (!this.session!.saveSlots) this.session!.saveSlots = [];
+           this.session!.saveSlots.push({
+              name: saveSlotName,
+              messagesSnapshot: JSON.parse(JSON.stringify(this.session!.messages)),
+              savedAt: new Date().toISOString(),
+              wordCount: this.totalWordCount
+           });
+           await this.saveSession();
+           (await this.toastCtrl.create({ message: `Game saved to slot: ${saveSlotName}`, duration: 2000 })).present();
+           return true;
+           
+        case '/load':
+           if (!this.session!.saveSlots || this.session!.saveSlots.length === 0) {
+              (await this.toastCtrl.create({ message: 'No save slots found.', duration: 2000 })).present();
+              return true;
+           }
+           
+           const buttons = this.session!.saveSlots.map((s, i) => ({
+              text: `${s.name} (${s.wordCount} words)`,
+              handler: async () => {
+                 this.session!.messages = JSON.parse(JSON.stringify(s.messagesSnapshot));
+                 await this.saveSession();
+                 (await this.toastCtrl.create({ message: 'Game loaded.', duration: 2000 })).present();
+                 this.scrollToBottom();
+              }
+           }));
+           buttons.push({ text: 'Cancel', handler: () => {} } as any);
+           
+           const alert = await this.alertCtrl.create({
+              header: 'Load Game',
+              buttons: buttons
+           });
+           await alert.present();
+           return true;
+           
+        case '/stats':
+           const start = new Date(this.session!.createdAt || Date.now());
+           const playTime = Math.round((Date.now() - start.getTime()) / 60000);
+           const turns = this.session!.messages.filter(m => m.role === 'user').length;
+           
+           const statsAlert = await this.alertCtrl.create({
+              header: 'Story Statistics',
+              message: `Words: ${this.totalWordCount}<br>Turns: ${turns}<br>Play time: ${playTime} mins`,
+              buttons: ['OK']
+           });
+           await statsAlert.present();
+           return true;
+           
+        case '/history':
+           // Show last 5 actions in a simplified list
+           const history = this.session!.messages.filter(m => m.role === 'user').slice(-5);
+           const historyAlert = await this.alertCtrl.create({
+              header: 'Recent Actions',
+              message: history.map(m => `- ${m.content}`).join('<br>') || 'No history.',
+              buttons: ['OK']
+           });
+           await historyAlert.present();
+           return true;
+           
+        default:
+           return false;
+     }
   }
 }

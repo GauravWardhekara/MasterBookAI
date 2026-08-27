@@ -8,6 +8,7 @@ import { AnthropicStrategy } from './providers/anthropic-strategy';
 import { LMStudioStrategy } from './providers/lmstudio-strategy';
 import { OllamaStrategy } from './providers/ollama-strategy';
 import { GeminiStrategy } from './providers/gemini-strategy';
+import { HuggingFaceStrategy } from './providers/huggingface-strategy';
 
 export interface CompletionOptions {
   model?: string;
@@ -43,6 +44,7 @@ export class LLMProviderService {
     lmstudio: new LMStudioStrategy(),
     ollama: new OllamaStrategy(),
     gemini: new GeminiStrategy(),
+    huggingface: new HuggingFaceStrategy(),
   };
 
   constructor(private connectionService: ConnectionService) {}
@@ -68,7 +70,19 @@ export class LLMProviderService {
     this.abortController = new AbortController();
     
     const strategy = this.getStrategy(conn.provider);
-    yield* strategy.stream(conn.endpointUrl, conn, options, messages, this.abortController.signal);
+    try {
+      yield* strategy.stream(conn.endpointUrl, conn, options, messages, this.abortController.signal);
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        console.log('Stream manually aborted.');
+        yield { content: '', done: true, finishReason: 'abort' };
+      } else {
+        console.error('Stream error:', err);
+        // Error recovery: we yield what we can, then terminate.
+        // The UI will keep what was successfully streamed before the crash.
+        yield { content: `\n\n[Connection Error: ${err.message}]`, done: true, finishReason: 'error' };
+      }
+    }
   }
 
   abort(): void {

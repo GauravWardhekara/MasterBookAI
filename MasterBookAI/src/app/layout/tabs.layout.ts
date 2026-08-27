@@ -5,6 +5,7 @@ import {
 import { addIcons } from 'ionicons';
 import {
   homeOutline, home, bookOutline, book, peopleOutline, people,
+  personOutline, person,
   libraryOutline, library, imagesOutline, images, settingsOutline, settings,
   bulbOutline, bulb, hardwareChipOutline, hardwareChip
 } from 'ionicons/icons';
@@ -19,9 +20,14 @@ import {
           <ion-label>Home</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="scenarios" href="/scenarios">
+        <ion-tab-button tab="worlds" href="/worlds">
           <ion-icon name="book-outline"></ion-icon>
           <ion-label>Worlds</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="scenarios" href="/scenarios">
+          <ion-icon name="person-outline"></ion-icon>
+          <ion-label>Scenarios</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="gallery" href="/gallery">
@@ -75,6 +81,7 @@ export class TabsLayout {
   constructor() {
     addIcons({
       homeOutline, home, bookOutline, book, peopleOutline, people,
+      personOutline, person,
       libraryOutline, library, imagesOutline, images, settingsOutline, settings,
       bulbOutline, bulb, hardwareChipOutline, hardwareChip
     });

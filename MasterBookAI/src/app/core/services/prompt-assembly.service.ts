@@ -6,6 +6,7 @@ import { Message, Memory } from '../models/chat-session.model';
 import { Character, Persona } from '../models/character.model';
 import { Scenario } from '../models/scenario.model';
 import { Lorebook, LoreEntry } from '../models/lorebook.model';
+import { MacroService, MacroContext } from './macro.service';
 
 /**
  * The assembled prompt context ready to send to the LLM.
@@ -35,6 +36,7 @@ export class PromptAssemblyService {
     private lorebookService: LorebookService,
     private characterService: CharacterService,
     private memoryService: MemoryService,
+    private macroService: MacroService,
   ) {}
 
   /**
@@ -51,8 +53,15 @@ export class PromptAssemblyService {
     // 1. Build system prompt
     const systemParts: string[] = [];
 
-    // Scenario special instructions
-    if (scenario.specialInstructions?.trim()) {
+    // Check for Character System Prompt Override
+    let customSystemPrompt = '';
+    if (activeCharacters.length > 0 && (activeCharacters[0] as any).systemPrompt?.trim()) {
+      customSystemPrompt = (activeCharacters[0] as any).systemPrompt.trim();
+    }
+
+    if (customSystemPrompt) {
+      systemParts.push(customSystemPrompt);
+    } else if (scenario.specialInstructions?.trim()) {
       systemParts.push(scenario.specialInstructions.trim());
     }
 
@@ -72,11 +81,24 @@ export class PromptAssemblyService {
       systemParts.push(`[User Persona - ${persona.name}]: ${persona.description.trim()}`);
     }
 
+    // ── Macro Expansion Context ──
+    const macroContext: MacroContext = {
+      userName: persona.name,
+      charName: activeCharacters.length > 0 ? activeCharacters[0].name : undefined,
+      messages: messages,
+      lastMessageTimestamp: messages.length > 0 ? messages[messages.length - 1].timestamp : undefined
+    };
+
+    // Expand macros in the base system parts
+    for (let i = 0; i < systemParts.length; i++) {
+      systemParts[i] = this.macroService.expand(systemParts[i], macroContext);
+    }
+
     // 3. Lorebook trigger scanning
     const triggeredEntries = this.scanForTriggers(messages, lorebooks, contextSize);
     if (triggeredEntries.length > 0) {
       const loreBlock = this.buildLoreBlock(triggeredEntries);
-      systemParts.push(loreBlock);
+      systemParts.push(this.macroService.expand(loreBlock, macroContext));
     }
 
     // 4. Memory retrieval (RAG-style semantic search)
@@ -104,13 +126,48 @@ export class PromptAssemblyService {
       console.warn('Memory retrieval failed (non-fatal):', err);
     }
 
+    // Add Post-History Instructions (Jailbreak) if present
+    let postHistoryInstructions = '';
+    if (activeCharacters.length > 0 && (activeCharacters[0] as any).postHistoryInstructions?.trim()) {
+      postHistoryInstructions = this.macroService.expand((activeCharacters[0] as any).postHistoryInstructions.trim(), macroContext);
+    }
+
     const systemPrompt = systemParts.join('\n\n');
 
     // 5. Trim message history to fit token budget
     // Rough estimate: 1 token ≈ 4 characters
-    const systemTokens = this.estimateTokens(systemPrompt);
+    const systemTokens = this.estimateTokens(systemPrompt) + this.estimateTokens(postHistoryInstructions);
     const availableTokens = contextSize - systemTokens - 200; // Reserve 200 for response
-    const trimmedMessages = this.trimMessages(messages, Math.max(availableTokens, 500));
+    const trimResult = this.trimMessages(messages, Math.max(availableTokens, 500));
+    const trimmedMessages = trimResult.trimmed;
+    const droppedMessages = trimResult.dropped;
+
+    // Trigger background scene compression if a significant chunk of messages were dropped and haven't been summarized
+    if (droppedMessages.length > 5 && scenario) {
+      // In a real implementation, you'd trigger a background task here to summarize droppedMessages
+      // We trigger memory auto-extraction in the background so it doesn't block assembly
+      this.memoryService.autoExtractMemories(
+        droppedMessages,
+        session.id,
+        scenario.id,
+        droppedMessages.length
+      ).catch(err => console.warn('Background compression failed:', err));
+    }
+
+    // If there are post-history instructions, we can either append them to the last user message
+    // or return them to be injected by the provider. For chat models, injecting as a system message
+    // at the very end (or appending to the last user message) is best.
+    if (postHistoryInstructions && trimmedMessages.length > 0) {
+      // Append to the last message if it's a user message, otherwise create a new system message
+      const lastMsg = trimmedMessages[trimmedMessages.length - 1];
+      if (lastMsg.role === 'user') {
+        lastMsg.content = `${lastMsg.content}\n\n[System Note: ${postHistoryInstructions}]`;
+      } else {
+        trimmedMessages.push({
+          id: 'jailbreak', role: 'system', senderId: 'system', content: postHistoryInstructions, timestamp: Date.now(), generatedImageRefs: [], isPinnedAsMemory: false, tokenCount: 0
+        });
+      }
+    }
 
     const totalEstimatedTokens = systemTokens + this.estimateTokens(
       trimmedMessages.map(m => m.content).join(' ')
@@ -241,21 +298,30 @@ export class PromptAssemblyService {
   /**
    * Trim messages to fit within a token budget, keeping the most recent ones.
    */
-  private trimMessages(messages: Message[], maxTokens: number): Message[] {
-    const result: Message[] = [];
+  private trimMessages(messages: Message[], maxTokens: number): { trimmed: Message[], dropped: Message[] } {
+    const trimmed: Message[] = [];
+    const dropped: Message[] = [];
     let totalTokens = 0;
 
     // Work backwards from the most recent messages
+    let cutoffIndex = -1;
     for (let i = messages.length - 1; i >= 0; i--) {
       const msgTokens = this.estimateTokens(messages[i].content);
-      if (totalTokens + msgTokens > maxTokens && result.length > 0) {
+      if (totalTokens + msgTokens > maxTokens && trimmed.length > 0) {
+        cutoffIndex = i;
         break;
       }
       totalTokens += msgTokens;
-      result.unshift(messages[i]);
+      trimmed.unshift(messages[i]);
     }
 
-    return result;
+    if (cutoffIndex >= 0) {
+      for (let i = 0; i <= cutoffIndex; i++) {
+        dropped.push(messages[i]);
+      }
+    }
+
+    return { trimmed, dropped };
   }
 
   /**

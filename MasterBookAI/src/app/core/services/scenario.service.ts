@@ -7,20 +7,22 @@ import { generateId, now } from '../models/base.model';
 export class ScenarioService {
   constructor(private db: DatabaseService) {}
 
-  async getAllScenarios(): Promise<Scenario[]> {
-    return this.db.scenarios.orderBy('updatedAt').reverse().toArray();
+  async getAllScenarios(type?: 'world' | 'scenario'): Promise<Scenario[]> {
+    const scenarios = await this.db.scenarios.orderBy('updatedAt').reverse().toArray();
+    return type ? scenarios.filter(s => s.type === type) : scenarios;
   }
 
   async getScenario(id: string): Promise<Scenario | undefined> {
     return this.db.scenarios.get(id);
   }
 
-  async searchScenarios(query: string): Promise<Scenario[]> {
+  async searchScenarios(query: string, type?: 'world' | 'scenario'): Promise<Scenario[]> {
     const q = query.toLowerCase();
     return this.db.scenarios
-      .filter(s => s.title.toLowerCase().includes(q) ||
+      .filter(s => (!type || s.type === type) && (
+                   s.title.toLowerCase().includes(q) ||
                    s.description.toLowerCase().includes(q) ||
-                   s.tags.some(t => t.toLowerCase().includes(q)))
+                   s.tags.some(t => t.toLowerCase().includes(q))))
       .toArray();
   }
 
@@ -29,6 +31,7 @@ export class ScenarioService {
       id: generateId(),
       createdAt: now(),
       updatedAt: now(),
+      type: data.type || 'scenario',
       title: data.title || 'New Scenario',
       description: data.description || '',
       coverImage: data.coverImage,

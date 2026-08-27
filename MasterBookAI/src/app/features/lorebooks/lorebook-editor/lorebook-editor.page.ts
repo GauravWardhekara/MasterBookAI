@@ -151,7 +151,7 @@ import { Character } from '../../../core/models/character.model';
                       <ion-textarea [(ngModel)]="entry.loreDescription" placeholder="Describe this lore for the AI..." rows="4" class="mb-input"></ion-textarea>
                     </div>
                     <div class="form-field">
-                      <label>Trigger Words</label>
+                      <label>Primary Trigger Words</label>
                       <div class="tags-input-row">
                         <ion-input [(ngModel)]="newTriggerWord" placeholder="Add trigger word..." class="mb-input" (keyup.enter)="addTriggerWord(entry)"></ion-input>
                         <ion-button fill="clear" (click)="addTriggerWord(entry)">
@@ -162,6 +162,23 @@ import { Character } from '../../../core/models/character.model';
                         @for (tw of entry.triggerWords; track tw) {
                           <ion-chip (click)="removeTriggerWord(entry, tw)">
                             {{ tw }} <ion-icon name="close-outline"></ion-icon>
+                          </ion-chip>
+                        }
+                      </div>
+                    </div>
+                    
+                    <div class="form-field">
+                      <label>Secondary Trigger Words</label>
+                      <div class="tags-input-row">
+                        <ion-input [(ngModel)]="newSecondaryWord" placeholder="Add secondary trigger..." class="mb-input" (keyup.enter)="addSecondaryWord(entry)"></ion-input>
+                        <ion-button fill="clear" (click)="addSecondaryWord(entry)">
+                          <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+                        </ion-button>
+                      </div>
+                      <div class="tags-list">
+                        @for (sw of entry.keySecondary || []; track sw) {
+                          <ion-chip (click)="removeSecondaryWord(entry, sw)">
+                            {{ sw }} <ion-icon name="close-outline"></ion-icon>
                           </ion-chip>
                         }
                       </div>
@@ -216,11 +233,29 @@ import { Character } from '../../../core/models/character.model';
                             <option value="before-context">Before Context</option>
                             <option value="after-context">After Context</option>
                             <option value="in-context">In Context</option>
+                            <option value="ANDepth">Author's Note / Depth</option>
+                          </select>
+                        </div>
+                        <div class="form-field">
+                          <label>Selective Logic</label>
+                          <select [(ngModel)]="entry.selectiveLogic" class="native-select">
+                            <option value="AND_ANY">AND ANY</option>
+                            <option value="AND_ALL">AND ALL</option>
+                            <option value="NOT_ANY">NOT ANY</option>
+                            <option value="NOT_ALL">NOT ALL</option>
                           </select>
                         </div>
                         <div class="form-field">
                           <label>Scan Depth</label>
                           <ion-input type="number" [(ngModel)]="entry.scanDepth" class="mb-input"></ion-input>
+                        </div>
+                        <div class="form-field">
+                          <label>Order</label>
+                          <ion-input type="number" [(ngModel)]="entry.order" class="mb-input"></ion-input>
+                        </div>
+                        <div class="form-field">
+                          <label>Group</label>
+                          <ion-input [(ngModel)]="entry.group" placeholder="e.g. Faction" class="mb-input"></ion-input>
                         </div>
                         <div class="form-field">
                           <label>Probability (%)</label>
@@ -232,6 +267,14 @@ import { Character } from '../../../core/models/character.model';
                       <ion-item lines="none" class="toggle-item">
                         <ion-label>Recursive</ion-label>
                         <ion-toggle [(ngModel)]="entry.isRecursive" slot="end"></ion-toggle>
+                      </ion-item>
+                      <ion-item lines="none" class="toggle-item">
+                        <ion-label>Exclude from recursion</ion-label>
+                        <ion-toggle [(ngModel)]="entry.excludeRecursion" slot="end"></ion-toggle>
+                      </ion-item>
+                      <ion-item lines="none" class="toggle-item">
+                        <ion-label>Constant (Always active)</ion-label>
+                        <ion-toggle [(ngModel)]="entry.constant" slot="end"></ion-toggle>
                       </ion-item>
                       <ion-item lines="none" class="toggle-item">
                         <ion-label>Enabled</ion-label>
@@ -390,6 +433,7 @@ export class LorebookEditorPage implements OnInit {
   filterType: LoreType | null = null;
   newTag = '';
   newTriggerWord = '';
+  newSecondaryWord = '';
   characters: Character[] = [];
 
   loreTypes = Object.values(LoreType);
@@ -503,6 +547,22 @@ export class LorebookEditorPage implements OnInit {
 
   removeTriggerWord(entry: LoreEntry, word: string): void {
     entry.triggerWords = entry.triggerWords.filter(w => w !== word);
+  }
+
+  addSecondaryWord(entry: LoreEntry): void {
+    if (this.newSecondaryWord.trim()) {
+      if (!entry.keySecondary) entry.keySecondary = [];
+      if (!entry.keySecondary.includes(this.newSecondaryWord.trim())) {
+        entry.keySecondary.push(this.newSecondaryWord.trim());
+      }
+      this.newSecondaryWord = '';
+    }
+  }
+
+  removeSecondaryWord(entry: LoreEntry, word: string): void {
+    if (entry.keySecondary) {
+      entry.keySecondary = entry.keySecondary.filter(w => w !== word);
+    }
   }
 
   // ── Links ──

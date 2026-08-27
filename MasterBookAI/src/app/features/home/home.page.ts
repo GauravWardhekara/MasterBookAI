@@ -7,7 +7,8 @@ import {
 import { addIcons } from 'ionicons';
 import {
   addOutline, bookOutline, peopleOutline, libraryOutline,
-  chatbubblesOutline, sparklesOutline, rocketOutline, bulbOutline
+  chatbubblesOutline, sparklesOutline, rocketOutline, bulbOutline,
+  personOutline
 } from 'ionicons/icons';
 import { ScenarioService } from '../../core/services/scenario.service';
 import { CharacterService } from '../../core/services/character.service';
@@ -41,20 +42,20 @@ import { MemoryService } from '../../core/services/memory.service';
       </div>
 
       <div class="stats-row mb-fade-in" style="animation-delay: 0.1s">
-        <div class="stat-card" (click)="navigateTo('/scenarios')">
+        <div class="stat-card" (click)="navigateTo('/worlds')">
           <ion-icon name="book-outline" color="primary"></ion-icon>
-          <div class="stat-value">{{ scenarioCount }}</div>
+          <div class="stat-value">{{ worldCount }}</div>
           <div class="stat-label">Worlds</div>
+        </div>
+        <div class="stat-card" (click)="navigateTo('/scenarios')">
+          <ion-icon name="person-outline" style="color: var(--mb-primary)"></ion-icon>
+          <div class="stat-value">{{ scenarioCount }}</div>
+          <div class="stat-label">Scenarios</div>
         </div>
         <div class="stat-card" (click)="navigateTo('/characters')">
           <ion-icon name="people-outline" style="color: var(--mb-secondary)"></ion-icon>
           <div class="stat-value">{{ characterCount }}</div>
           <div class="stat-label">Characters</div>
-        </div>
-        <div class="stat-card" (click)="navigateTo('/lorebooks')">
-          <ion-icon name="library-outline" style="color: var(--mb-accent)"></ion-icon>
-          <div class="stat-value">{{ lorebookCount }}</div>
-          <div class="stat-label">Lorebooks</div>
         </div>
         <div class="stat-card" (click)="navigateTo('/gallery')">
           <ion-icon name="chatbubbles-outline" style="color: var(--mb-success)"></ion-icon>
@@ -68,11 +69,17 @@ import { MemoryService } from '../../core/services/memory.service';
           <span class="mb-section-title">Quick Actions</span>
         </div>
         <div class="action-grid">
-          <div class="action-card" (click)="navigateTo('/scenarios/new')">
+          <div class="action-card" (click)="navigateTo('/worlds/new')">
             <div class="action-icon" style="background: rgba(167, 139, 250, 0.1)">
               <ion-icon name="book-outline" style="color: var(--mb-primary)"></ion-icon>
             </div>
             <span>New World</span>
+          </div>
+          <div class="action-card" (click)="navigateTo('/scenarios/new')">
+            <div class="action-icon" style="background: rgba(167, 139, 250, 0.1)">
+              <ion-icon name="person-outline" style="color: var(--mb-primary)"></ion-icon>
+            </div>
+            <span>New Scenario</span>
           </div>
           <div class="action-card" (click)="navigateTo('/characters/new')">
             <div class="action-icon" style="background: rgba(96, 165, 250, 0.1)">
@@ -321,6 +328,7 @@ import { MemoryService } from '../../core/services/memory.service';
 ],
 })
 export class HomePage implements OnInit {
+  worldCount = 0;
   scenarioCount = 0;
   characterCount = 0;
   lorebookCount = 0;
@@ -337,7 +345,8 @@ export class HomePage implements OnInit {
   ) {
     addIcons({
       addOutline, bookOutline, peopleOutline, libraryOutline,
-      chatbubblesOutline, sparklesOutline, rocketOutline, bulbOutline
+      chatbubblesOutline, sparklesOutline, rocketOutline, bulbOutline,
+      personOutline
     });
   }
 
@@ -346,13 +355,15 @@ export class HomePage implements OnInit {
   }
 
   async loadCounts(): Promise<void> {
-    const [scenarios, characters, lorebooks, sessions, memoryStats] = await Promise.all([
-      this.scenarioService.getAllScenarios(),
+    const [worlds, scenarios, characters, lorebooks, sessions, memoryStats] = await Promise.all([
+      this.scenarioService.getAllScenarios('world'),
+      this.scenarioService.getAllScenarios('scenario'),
       this.characterService.getAllCharacters(),
       this.lorebookService.getAllLorebooks(),
       this.chatSessionService.getAllSessions(),
       this.memoryService.getStats(),
     ]);
+    this.worldCount = worlds.length;
     this.scenarioCount = scenarios.length;
     this.characterCount = characters.length;
     this.lorebookCount = lorebooks.length;

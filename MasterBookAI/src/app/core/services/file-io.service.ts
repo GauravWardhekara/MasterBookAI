@@ -4,8 +4,9 @@ import { CharacterService } from './character.service';
 import { LorebookService } from './lorebook.service';
 import { ScenarioService } from './scenario.service';
 import { ChatSessionService } from './chat-session.service';
-import { ChatExportFile } from '../models/export-file.model';
-import { ChatSession } from '../models/chat-session.model';
+import { ChatExportFile, SillyTavernWorldInfo, SillyTavernWIEntry } from '../models/export-file.model';
+import { ChatSession, Message } from '../models/chat-session.model';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 
 /**
  * Service for exporting and importing chats/stories to/from local JSON files.
@@ -66,14 +67,128 @@ export class FileIOService {
   /**
    * Download the exported file via browser.
    */
-  downloadFile(content: string, filename: string): void {
-    const blob = new Blob([content], { type: 'application/json' });
+  downloadFile(content: string | Blob, filename: string): void {
+    const blob = typeof content === 'string' ? new Blob([content], { type: 'application/json' }) : content;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Export a story session as a formatted Word Document (DOCX).
+   */
+  async exportStoryAsDOCX(sessionId: string): Promise<Blob> {
+    const session = await this.chatSessionService.getSession(sessionId);
+    if (!session) throw new Error('Session not found');
+
+    const paragraphs: Paragraph[] = [
+      new Paragraph({
+        text: session.title || 'MasterBookAI Story',
+        heading: HeadingLevel.HEADING_1,
+        spacing: { after: 400 },
+      })
+    ];
+
+    for (const msg of session.messages) {
+      if (msg.role === 'system' || msg.role === 'narrator') continue; // Skip raw system prompts
+      
+      const isUser = msg.role === 'user';
+      const textLines = msg.content.split('\\n');
+      
+      for (const line of textLines) {
+        if (!line.trim()) {
+           paragraphs.push(new Paragraph({ text: '' })); // empty line
+           continue;
+        }
+        
+        paragraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: line,
+                bold: isUser,
+                color: isUser ? '4f46e5' : undefined, // Indigo for user actions, default for AI prose
+              }),
+            ],
+            spacing: { after: 120 },
+          })
+        );
+      }
+    }
+
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: paragraphs,
+      }],
+    });
+
+    return await Packer.toBlob(doc);
+  }
+
+  /**
+   * Export a scenario and its lorebooks as a SillyTavern World Info JSON file.
+   */
+  async exportWorldAsSTWorldInfo(scenarioId: string): Promise<string> {
+    const scenario = await this.scenarioService.getScenario(scenarioId);
+    if (!scenario) throw new Error('Scenario not found');
+
+    const lorebooks = await this.lorebookService.getLorebooksByIds(scenario.lorebookIds);
+    const stWorldInfo: SillyTavernWorldInfo = { entries: {} };
+
+    let uidCounter = 1;
+    for (const lb of lorebooks) {
+      for (const entry of lb.entries) {
+        const uid = String(uidCounter++);
+        stWorldInfo.entries[uid] = {
+          uid: parseInt(uid, 10),
+          key: entry.triggerWords,
+          keysecondary: entry.keySecondary || [],
+          comment: entry.comment || entry.title || '',
+          content: entry.loreDescription,
+          constant: entry.constant || false,
+          selective: !!entry.keySecondary && entry.keySecondary.length > 0,
+          selectiveLogic: this.mapSelectiveLogicToST(entry.selectiveLogic),
+          addMemo: false,
+          order: entry.order || 100,
+          position: this.mapPositionToST(entry.insertionPosition),
+          disable: !entry.isEnabled,
+          excludeRecursion: entry.excludeRecursion || false,
+          probability: (entry.probability || 1.0) * 100,
+          depth: entry.depth || 4,
+          group: entry.group || '',
+          automationId: entry.automationId || '',
+        };
+      }
+    }
+
+    return JSON.stringify(stWorldInfo, null, 2);
+  }
+
+  private mapSelectiveLogicToST(logic?: string): number {
+    switch (logic) {
+      case 'AND_ANY': return 0;
+      case 'AND_ALL': return 1;
+      case 'NOT_ANY': return 2;
+      case 'NOT_ALL': return 3;
+      default: return 0;
+    }
+  }
+
+  private mapPositionToST(pos: string): number {
+    // ST positions: 0=before char, 1=after char, 2=before example, 3=after example, 4=at depth
+    switch (pos) {
+      case 'before_char': return 0;
+      case 'after_char': return 1;
+      case 'before_example': return 2;
+      case 'after_example': return 3;
+      case 'ANDepth': return 4;
+      case 'before-context': return 4; // Map generic 'before' to depth
+      default: return 4;
+    }
   }
 
   /**

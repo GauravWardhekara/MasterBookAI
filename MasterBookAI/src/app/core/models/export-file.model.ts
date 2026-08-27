@@ -60,3 +60,37 @@ export interface SillyTavernWIEntry {
   role?: number;
   vectorized?: boolean;
 }
+
+/**
+ * SillyTavern V2 Character Card format.
+ */
+export interface SillyTavernV2Character {
+  name: string;
+  description: string;
+  personality: string;
+  scenario: string;
+  first_mes: string;
+  mes_example: string;
+  creator_notes: string;
+  system_prompt: string;
+  post_history_instructions: string;
+  tags: string[];
+  creator: string;
+  character_version: string;
+  alternate_greetings: string[];
+  extensions: Record<string, any>;
+  character_book?: {
+    name?: string;
+    description?: string;
+    entries: SillyTavernWIEntry[];
+  };
+}
+
+/**
+ * Root structure inside a SillyTavern V2 character card PNG.
+ */
+export interface SillyTavernV2Data {
+  spec: 'chara_card_v2';
+  spec_version: '2.0';
+  data: SillyTavernV2Character;
+}
