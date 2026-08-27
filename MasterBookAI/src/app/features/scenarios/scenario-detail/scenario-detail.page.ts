@@ -16,6 +16,7 @@ import { ScenarioService } from '../../../core/services/scenario.service';
 import { CharacterService } from '../../../core/services/character.service';
 import { ChatSessionService } from '../../../core/services/chat-session.service';
 import { ConnectionService } from '../../../core/services/connection.service';
+import { WebLlmService } from '../../../core/services/web-llm.service';
 
 import { Scenario } from '../../../core/models/scenario.model';
 import { Character } from '../../../core/models/character.model';
@@ -103,7 +104,7 @@ import { ChatSession } from '../../../core/models/chat-session.model';
               <!-- Start / Continue Chat Buttons -->
               @if (sessions.length === 0) {
                 <ion-button class="start-btn mb-btn-primary" (click)="startNewChat()">
-                  Play World
+                  Play
                 </ion-button>
               } @else {
                 <div class="split-actions">
@@ -357,6 +358,7 @@ export class ScenarioDetailPage implements OnInit {
     private characterService: CharacterService,
     private chatSessionService: ChatSessionService,
     private connectionService: ConnectionService,
+    private webLlmService: WebLlmService,
     private alertCtrl: AlertController,
     private toastCtrl: ToastController
   ) {
@@ -392,10 +394,22 @@ export class ScenarioDetailPage implements OnInit {
     profiles.forEach(p => {
       if (p.modelList) models = models.concat(p.modelList);
     });
+
+    // Add active WebGPU model if present
+    const activeWebGpu = this.webLlmService.activeModel$.value;
+    if (activeWebGpu) {
+      models.push(activeWebGpu);
+    }
+
     this.allModels = [...new Set(models)];
 
     const defaultProfile = await this.connectionService.getDefaultProfile();
-    this.selectedModel = defaultProfile?.modelList?.[0] || this.allModels[0] || '';
+    
+    if (activeWebGpu) {
+      this.selectedModel = activeWebGpu;
+    } else {
+      this.selectedModel = defaultProfile?.modelList?.[0] || this.allModels[0] || '';
+    }
   }
 
   getDefaultHref(): string {
