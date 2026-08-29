@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -13,7 +13,8 @@ import {
   createOutline, trashOutline, copyOutline, stopCircleOutline,
   ellipsisVerticalOutline, chatbubblesOutline, bookOutline,
   personOutline, chevronDownOutline, sparklesOutline,
-  bookmarkOutline, bulbOutline, imageOutline
+  bookmarkOutline, bulbOutline, imageOutline,
+  chevronBackOutline, chevronForwardOutline, cloudUploadOutline
 } from 'ionicons/icons';
 import { ChatSessionService } from '../../core/services/chat-session.service';
 import { ScenarioService } from '../../core/services/scenario.service';
@@ -30,6 +31,7 @@ import { ConnectionProfile } from '../../core/models/connection-profile.model';
 import { generateId, now } from '../../core/models/base.model';
 import { MemoryService } from '../../core/services/memory.service';
 import { ChatSetupModalComponent } from '../../shared/components/chat-setup-modal/chat-setup-modal.component';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-chat',
@@ -110,30 +112,7 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
                 </div>
               </div>
             }
-            <!-- Greeting message (if no messages yet) -->
-            @if (session.messages.length === 0 && greeting) {
-              <div class="greeting-card mb-fade-in">
-                <div class="greeting-avatar">
-                  @if (activeCharacters[0]?.avatar) {
-                    <div class="msg-avatar">
-                      <img [src]="activeCharacters[0].avatar" alt="" />
-                    </div>
-                  }
-                  @if (!activeCharacters[0]?.avatar) {
-                    <div class="msg-avatar placeholder-avatar">
-                      {{ (activeCharacters[0]?.name || '?').charAt(0) }}
-                    </div>
-                  }
-                </div>
-                <div class="greeting-content">
-                  <div class="greeting-name">{{ activeCharacters[0]?.name || 'AI' }}</div>
-                  <div class="greeting-text">{{ greeting }}</div>
-                </div>
-                <ion-button fill="clear" size="small" class="use-greeting-btn" (click)="useGreeting()">
-                  Use as first message
-                </ion-button>
-              </div>
-            }
+
             <!-- Message Bubbles -->
             @for (msg of session.messages; track trackByMsgId(i, msg); let i = $index) {
               <div
@@ -164,6 +143,17 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
                     [class.ai-bubble]="msg.role === 'assistant'"
                     [class.sys-bubble]="msg.role === 'system' || msg.role === 'narrator'">
                     <div class="msg-text" [innerHTML]="formatMessage(msg.content)"></div>
+                    @if (msg.alternates && msg.alternates.length > 1) {
+                      <div class="msg-swipe-controls">
+                        <ion-button fill="clear" size="small" (click)="prevAlternate(msg)">
+                          <ion-icon name="chevron-back-outline" slot="icon-only"></ion-icon>
+                        </ion-button>
+                        <span class="swipe-counter">{{ (msg.activeAlternateIndex || 0) + 1 }} / {{ msg.alternates.length }}</span>
+                        <ion-button fill="clear" size="small" (click)="nextAlternate(msg)">
+                          <ion-icon name="chevron-forward-outline" slot="icon-only"></ion-icon>
+                        </ion-button>
+                      </div>
+                    }
                     @if (msg.generatedImageRefs && msg.generatedImageRefs.length > 0) {
                       <div class="msg-images">
                         @for (imgUrl of msg.generatedImageRefs; track imgUrl) {
@@ -186,10 +176,14 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
                         <ion-button fill="clear" size="small" (click)="openImageGen(msg)" title="Generate Image">
                           <ion-icon slot="icon-only" name="image-outline"></ion-icon>
                         </ion-button>
-                        @if (msg.role === 'assistant' && i === session!.messages.length - 1) {
+                        @if (msg.role === 'assistant') {
                           <ion-button
-                            fill="clear" size="small" (click)="regenerateMessage(msg, i)">
+                            fill="clear" size="small" (click)="regenerateMessage(msg, i)" title="Regenerate/Swipe">
                             <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+                          </ion-button>
+                          <ion-button
+                            fill="clear" size="small" (click)="continueMessage(msg, i)" title="Continue Message">
+                            <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
                           </ion-button>
                         }
                         <ion-button fill="clear" size="small" color="danger" (click)="deleteMessage(i)">
@@ -238,6 +232,9 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
               rows="1"
             ></textarea>
             @if (!isStreaming) {
+              <ion-button class="action-btn" fill="clear" (click)="impersonate()" title="Impersonate (AI speaks as you)">
+                <ion-icon slot="icon-only" name="person-outline"></ion-icon>
+              </ion-button>
               <ion-button class="send-btn"
                 [disabled]="!inputText.trim() || !connectionProfile"
                 fill="clear" (click)="sendMessage()">
@@ -316,6 +313,15 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
     }
     .message-row.user-msg { margin-left: auto; flex-direction: row-reverse; }
     .message-row.system-msg { max-width: 100%; justify-content: center; }
+
+    .msg-swipe-controls {
+      display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+      margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(128, 128, 128, 0.15);
+    }
+    .msg-swipe-controls ion-button {
+      --padding-start: 4px; --padding-end: 4px; height: 24px; min-height: 24px; font-size: 16px; color: var(--mb-text-muted);
+    }
+    .swipe-counter { font-size: 11px; color: var(--mb-text-muted); min-width: 32px; text-align: center; font-weight: 500; }
 
     .msg-avatar-col { flex-shrink: 0; padding-top: 2px; }
     .msg-avatar {
@@ -426,7 +432,7 @@ import { ChatSetupModalComponent } from '../../shared/components/chat-setup-moda
     IonButtons, IonFooter
   ],
 })
-export class ChatPage implements OnInit {
+export class ChatPage implements OnInit, OnDestroy {
   session?: ChatSession;
   scenario?: Scenario;
   persona?: Persona;
@@ -434,6 +440,7 @@ export class ChatPage implements OnInit {
   lorebooks: Lorebook[] = [];
   connectionProfile?: ConnectionProfile;
   activeModel?: string;
+  private connectionSub?: Subscription;
 
   inputText = '';
   isStreaming = false;
@@ -470,7 +477,8 @@ export class ChatPage implements OnInit {
       createOutline, trashOutline, copyOutline, stopCircleOutline,
       ellipsisVerticalOutline, chatbubblesOutline, bookOutline,
       personOutline, chevronDownOutline, sparklesOutline,
-      bookmarkOutline, bulbOutline, imageOutline
+      bookmarkOutline, bulbOutline, imageOutline,
+      chevronBackOutline, chevronForwardOutline, cloudUploadOutline
     });
   }
 
@@ -493,11 +501,20 @@ export class ChatPage implements OnInit {
     const persona = await this.characterService.getDefaultPersona();
     this.persona = persona || { id: 'default-persona', name: 'User', description: '', isDefault: true, createdAt: now(), updatedAt: now() };
 
-    // Load connection
-    this.connectionProfile = await this.connectionService.getDefaultProfile();
-    if (this.connectionProfile && this.connectionProfile.modelList.length > 0) {
-      this.activeModel = this.connectionProfile.modelList[0];
-    }
+    // Subscribe to connection updates
+    this.connectionSub = this.connectionService.activeProfile$.subscribe(profile => {
+      this.connectionProfile = profile;
+      if (this.connectionProfile && this.connectionProfile.modelList && this.connectionProfile.modelList.length > 0) {
+        if (!this.activeModel || !this.connectionProfile.modelList.includes(this.activeModel)) {
+          this.activeModel = this.connectionProfile.defaultModel || this.connectionProfile.modelList[0];
+          if (this.activeModel && !this.connectionProfile.modelList.includes(this.activeModel)) {
+            this.activeModel = this.connectionProfile.modelList[0];
+          }
+        }
+      } else {
+        this.activeModel = undefined;
+      }
+    });
 
     // Set greeting from first character
     if (this.activeCharacters.length > 0 && this.session.messages.length === 0) {
@@ -509,6 +526,10 @@ export class ChatPage implements OnInit {
 
     // Scroll to bottom
     setTimeout(() => this.scrollToBottom(), 100);
+  }
+
+  ngOnDestroy(): void {
+    if (this.connectionSub) this.connectionSub.unsubscribe();
   }
 
   // ── Messaging ──
@@ -537,17 +558,27 @@ export class ChatPage implements OnInit {
     await this.generateResponse();
   }
 
-  async generateResponse(): Promise<void> {
+  async generateResponse(isImpersonating = false, continueTarget?: Message): Promise<void> {
     if (!this.session || !this.scenario || !this.persona || !this.connectionProfile) return;
 
     this.isStreaming = true;
     this.streamingContent = '';
 
     // Determine which character is responding
-    const respondingChar = this.activeCharacters.find(c =>
-      this.scenario!.characterRoles[c.id] === 'npc'
-    ) || this.activeCharacters[0];
-    this.streamingSenderName = respondingChar?.name || 'AI';
+    let respondingChar: any;
+    
+    if (isImpersonating) {
+      this.streamingSenderName = this.persona?.name || 'User';
+      respondingChar = this.persona;
+    } else if (continueTarget) {
+      this.streamingSenderName = continueTarget.senderName;
+      respondingChar = { id: continueTarget.senderId, name: continueTarget.senderName };
+    } else {
+      respondingChar = this.activeCharacters.find(c =>
+        this.scenario!.characterRoles[c.id] === 'npc'
+      ) || this.activeCharacters[0];
+      this.streamingSenderName = respondingChar?.name || 'AI';
+    }
 
     try {
       // Assemble prompt
@@ -592,20 +623,34 @@ export class ChatPage implements OnInit {
         }, this.connectionProfile);
       }
 
-      // Add the completed response as a message
-      if (this.streamingContent.trim()) {
-        const aiMessage: Message = {
-          id: generateId(),
-          role: 'assistant',
-          senderId: respondingChar?.id || 'ai',
-          senderName: respondingChar?.name || 'AI',
-          content: this.streamingContent.trim(),
-          timestamp: now(),
-          generatedImageRefs: [],
-          isPinnedAsMemory: false,
-          tokenCount: Math.ceil(this.streamingContent.trim().length / 4),
-        };
-        this.session.messages.push(aiMessage);
+      // Handle the completed response
+      const finalContent = this.streamingContent.trim();
+      if (finalContent) {
+        if (continueTarget) {
+          // Remove the temporary system message
+          this.session.messages.pop();
+          // Append to the target message
+          continueTarget.content = (continueTarget.content + ' ' + finalContent).trim();
+          continueTarget.tokenCount = Math.ceil(continueTarget.content.length / 4);
+        } else {
+          // If we were impersonating, remove the temporary system message
+          if (isImpersonating) {
+             this.session.messages.pop();
+          }
+          
+          const newMessage: Message = {
+            id: generateId(),
+            role: isImpersonating ? 'user' : 'assistant',
+            senderId: respondingChar?.id || 'ai',
+            senderName: respondingChar?.name || 'AI',
+            content: finalContent,
+            timestamp: now(),
+            generatedImageRefs: [],
+            isPinnedAsMemory: false,
+            tokenCount: Math.ceil(finalContent.length / 4),
+          };
+          this.session.messages.push(newMessage);
+        }
         await this.saveSession();
       }
     } catch (error: any) {
@@ -630,14 +675,93 @@ export class ChatPage implements OnInit {
   }
 
   async regenerateMessage(msg: Message, index: number): Promise<void> {
-    if (!this.session || this.isStreaming) return;
+    if (!this.session || !this.scenario || !this.persona || !this.connectionProfile || this.isStreaming) return;
 
-    // Remove the last AI message
-    this.session.messages.splice(index, 1);
-    await this.saveSession();
+    this.isStreaming = true;
+    this.streamingContent = '';
 
-    // Regenerate
-    await this.generateResponse();
+    // Determine which character is responding
+    const respondingChar = this.activeCharacters.find(c =>
+      this.scenario!.characterRoles[c.id] === 'npc'
+    ) || this.activeCharacters[0];
+    this.streamingSenderName = respondingChar?.name || 'AI';
+
+    try {
+      // Assemble prompt using messages ONLY up to (but not including) the target message
+      const messagesUpToIndex = this.session.messages.slice(0, index);
+      const assembled = await this.promptAssembly.assemble(
+        this.scenario,
+        this.persona,
+        this.activeCharacters,
+        messagesUpToIndex,
+        this.lorebooks,
+        this.connectionProfile.contextSize
+      );
+
+      // Convert to LLM format
+      const llmMessages = this.llmProvider.convertMessages(
+        assembled.messages,
+        assembled.systemPrompt,
+        this.connectionProfile.promptTemplate
+      );
+
+      let newContent = '';
+
+      if (this.connectionProfile.streamingEnabled) {
+        for await (const chunk of this.llmProvider.stream(llmMessages, {
+          model: this.activeModel,
+          temperature: this.connectionProfile.defaultSampling?.temperature,
+          maxTokens: this.connectionProfile.defaultSampling?.maxTokens,
+        }, this.connectionProfile)) {
+          if (chunk.done) break;
+          this.ngZone.run(() => {
+            newContent += chunk.content;
+            this.streamingContent = newContent;
+          });
+          this.scrollToBottom();
+        }
+      } else {
+        newContent = await this.llmProvider.complete(llmMessages, {
+          model: this.activeModel,
+          temperature: this.connectionProfile.defaultSampling?.temperature,
+          maxTokens: this.connectionProfile.defaultSampling?.maxTokens,
+        }, this.connectionProfile);
+      }
+
+      if (newContent.trim()) {
+        // Initialize alternates if needed
+        if (!msg.alternates) {
+          msg.alternates = [msg.content];
+        }
+        
+        // Ensure the current content is in the alternates array
+        if (!msg.alternates.includes(msg.content)) {
+            msg.alternates.push(msg.content);
+        }
+
+        // Add the new generation
+        const cleanContent = newContent.trim();
+        if (!msg.alternates.includes(cleanContent)) {
+          msg.alternates.push(cleanContent);
+        }
+
+        msg.content = cleanContent;
+        msg.activeAlternateIndex = msg.alternates.indexOf(cleanContent);
+        msg.tokenCount = Math.ceil(cleanContent.length / 4);
+
+        await this.saveSession();
+      }
+    } catch (error: any) {
+      const toast = await this.toastCtrl.create({
+        message: `Error: ${error.message}`,
+        duration: 4000,
+        color: 'danger',
+      });
+      await toast.present();
+    } finally {
+      this.isStreaming = false;
+      this.streamingContent = '';
+    }
   }
 
   async deleteMessage(index: number): Promise<void> {
@@ -702,25 +826,68 @@ export class ChatPage implements OnInit {
     this.streamingContent = '';
   }
 
-  useGreeting(): void {
-    if (!this.session || !this.greeting) return;
+  prevAlternate(msg: Message): void {
+    if (!msg.alternates || msg.alternates.length <= 1) return;
+    let idx = msg.activeAlternateIndex || 0;
+    idx = (idx - 1 + msg.alternates.length) % msg.alternates.length;
+    msg.activeAlternateIndex = idx;
+    msg.content = msg.alternates[idx];
+    this.saveSession();
+  }
 
-    const respondingChar = this.activeCharacters[0];
-    const greetingMsg: Message = {
+  nextAlternate(msg: Message): void {
+    if (!msg.alternates || msg.alternates.length <= 1) return;
+    let idx = msg.activeAlternateIndex || 0;
+    idx = (idx + 1) % msg.alternates.length;
+    msg.activeAlternateIndex = idx;
+    msg.content = msg.alternates[idx];
+    this.saveSession();
+  }
+
+  // ── Advanced Chat Actions ──
+
+  async impersonate(): Promise<void> {
+    if (!this.session || this.isStreaming) return;
+    
+    // Set a temporary input text that tells the system to impersonate
+    const impersonateInstruction = `[System Note: Write the next response strictly from the perspective of ${this.persona?.name || 'the User'}. Do not write as the AI character.]`;
+    
+    // Add a temporary system message to force impersonation
+    this.session.messages.push({
       id: generateId(),
-      role: 'assistant',
-      senderId: respondingChar?.id || 'ai',
-      senderName: respondingChar?.name || 'AI',
-      content: this.greeting,
+      role: 'system',
+      senderId: 'system',
+      senderName: 'System',
+      content: impersonateInstruction,
       timestamp: now(),
       generatedImageRefs: [],
       isPinnedAsMemory: false,
-      tokenCount: Math.ceil(this.greeting.length / 4),
-    };
-    this.session.messages.push(greetingMsg);
-    this.greeting = undefined;
-    this.saveSession();
-    this.scrollToBottom();
+      tokenCount: Math.ceil(impersonateInstruction.length / 4)
+    });
+
+    await this.generateResponse(true); // pass flag if needed, but the system message does the work
+  }
+
+  async continueMessage(msg: Message, index: number): Promise<void> {
+    if (!this.session || this.isStreaming) return;
+
+    // To continue a message with a Chat API, we typically append a system instruction
+    // telling the AI to seamlessly continue the exact last message.
+    const continueInstruction = `[System Note: Seamlessly continue the previous message from where it left off. Do not add any introductory text, just append the next sentence.]`;
+    
+    this.session.messages.push({
+      id: generateId(),
+      role: 'system',
+      senderId: 'system',
+      senderName: 'System',
+      content: continueInstruction,
+      timestamp: now(),
+      generatedImageRefs: [],
+      isPinnedAsMemory: false,
+      tokenCount: Math.ceil(continueInstruction.length / 4)
+    });
+
+    await this.generateResponse(false, msg); 
   }
 
   // ── Chat Menu ──
@@ -735,6 +902,17 @@ export class ChatPage implements OnInit {
           handler: () => this.renameChat(),
         },
         {
+          text: 'Import SillyTavern Chat (.jsonl)',
+          icon: 'cloud-upload-outline',
+          handler: () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.jsonl';
+            input.onchange = (e) => this.importSillyTavernChat(e);
+            input.click();
+          },
+        },
+        {
           text: 'Clear Messages',
           icon: 'trash-outline',
           role: 'destructive',
@@ -744,6 +922,63 @@ export class ChatPage implements OnInit {
       ],
     });
     await actionSheet.present();
+  }
+
+  async importSillyTavernChat(event: Event): Promise<void> {
+    if (!this.session) return;
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      const newMessages: Message[] = [];
+      for (const line of lines) {
+        try {
+          const msgData = JSON.parse(line);
+          const isUser = msgData.is_user || msgData.is_system === false && msgData.name === this.persona?.name;
+          
+          let role: 'user' | 'assistant' | 'system' = 'assistant';
+          if (msgData.is_user) role = 'user';
+          if (msgData.is_system) role = 'system';
+          
+          let alternates = [msgData.mes];
+          if (msgData.extra && msgData.extra.swipes) {
+            alternates = msgData.extra.swipes;
+          }
+          
+          newMessages.push({
+            id: generateId(),
+            role,
+            senderId: role === 'user' ? (this.persona?.id || 'user') : (msgData.name || 'ai'),
+            senderName: msgData.name || (role === 'user' ? 'User' : 'AI'),
+            content: msgData.mes || '',
+            timestamp: msgData.send_date ? new Date(msgData.send_date).toISOString() : now(),
+            generatedImageRefs: [],
+            isPinnedAsMemory: false,
+            tokenCount: Math.ceil((msgData.mes || '').length / 4),
+            alternates: alternates,
+            activeAlternateIndex: msgData.extra?.active_swipe_id || 0
+          });
+        } catch (e) {
+          console.warn('Failed to parse chat line', e);
+        }
+      }
+
+      if (newMessages.length > 0) {
+        this.session.messages = [...this.session.messages, ...newMessages];
+        await this.saveSession();
+        const toast = await this.toastCtrl.create({ message: `Imported ${newMessages.length} messages!`, duration: 2000, color: 'success' });
+        await toast.present();
+        this.scrollToBottom();
+      }
+    } catch (e) {
+      const toast = await this.toastCtrl.create({ message: 'Failed to import chat', duration: 3000, color: 'danger' });
+      await toast.present();
+    }
+    input.value = '';
   }
 
   async openChatSettings(): Promise<void> {

@@ -63,7 +63,7 @@ export class ConnectionService {
     const isMobile = Capacitor.isNativePlatform();
     
     // First, check if there's an explicitly set default profile
-    let defaultProfile = await this.db.connectionProfiles.where('isDefault').equals(1).first();
+    let defaultProfile = await this.db.connectionProfiles.filter(p => p.isDefault === true).first();
     
     // If it's a mobile platform and the default is Ollama, try to fallback to a Cloud or Web-LLM provider
     if (isMobile && defaultProfile?.provider === 'ollama') {
@@ -101,12 +101,15 @@ export class ConnectionService {
       },
       streamingEnabled: data.streamingEnabled ?? true,
       promptTemplate: data.promptTemplate || 'chatml',
+      defaultModel: data.defaultModel || '',
+      customStopStrings: data.customStopStrings || [],
+      tokenizer: data.tokenizer,
       isDefault: data.isDefault || false,
     };
 
     // If this is being set as default, unset others
     if (profile.isDefault) {
-      await this.db.connectionProfiles.where('isDefault').equals(1).modify({ isDefault: false });
+      await this.db.connectionProfiles.filter(p => p.isDefault === true).modify({ isDefault: false });
     }
 
     await this.db.connectionProfiles.add(profile);
@@ -116,7 +119,7 @@ export class ConnectionService {
 
   async updateProfile(id: string, data: Partial<ConnectionProfile>): Promise<void> {
     if (data.isDefault) {
-      await this.db.connectionProfiles.where('isDefault').equals(1).modify({ isDefault: false });
+      await this.db.connectionProfiles.filter(p => p.isDefault === true).modify({ isDefault: false });
     }
     await this.db.connectionProfiles.update(id, { ...data, updatedAt: now() });
     if (data.isDefault) this.startHealthCheckLoop();
@@ -247,6 +250,16 @@ export class ConnectionService {
       case 'openai': return 'https://api.openai.com';
       case 'anthropic': return 'https://api.anthropic.com';
       case 'gemini': return 'https://generativelanguage.googleapis.com';
+      case 'openrouter': return 'https://openrouter.ai/api/v1';
+      case 'nanogpt': return 'https://nano-gpt.com/api/v1';
+      case 'literouter': return 'https://api.literouter.com/v1';
+      case 'featherless': return 'https://api.featherless.ai/v1';
+      case 'deepinfra': return 'https://api.deepinfra.com/v1/openai';
+      case 'togetherai': return 'https://api.together.xyz/v1';
+      case 'groq': return 'https://api.groq.com/openai/v1';
+      case 'wavespeed': return 'https://llm.wavespeed.ai/v1';
+      case 'ofox': return 'https://api.ofox.ai/v1';
+      case 'aimlapi': return 'https://api.aimlapi.com/v1';
       case 'lmstudio': return 'http://localhost:1234';
       case 'ollama': return 'http://localhost:11434';
       case 'vllm': return 'http://localhost:8000';

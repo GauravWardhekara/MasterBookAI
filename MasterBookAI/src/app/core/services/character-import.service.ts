@@ -106,7 +106,13 @@ export class CharacterImportService {
 
     // chub.ai returns node.definition which is the char card
     const definition = apiData?.node?.definition;
-    if (!definition) throw new Error('Could not find character definition from chub.ai');
+    if (!definition) {
+      const maxResUrl = apiData?.node?.max_res_url;
+      if (maxResUrl && maxResUrl.endsWith('.png')) {
+        return this.importFromRawUrl(maxResUrl);
+      }
+      throw new Error('Could not find character definition from chub.ai');
+    }
 
     const cardJson: CharCardV2 = {
       spec: 'chara_card_v2',
@@ -206,7 +212,16 @@ export class CharacterImportService {
       const buffer = await resp.arrayBuffer();
       const charData = this.extractCharDataFromPng(new Uint8Array(buffer));
       if (!charData) throw new Error('No character data found in PNG file');
-      const json = JSON.parse(atob(charData));
+      
+      // Correctly decode UTF-8 from base64
+      const binaryStr = atob(charData);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      const jsonText = new TextDecoder().decode(bytes);
+      const json = JSON.parse(jsonText);
+      
       const character = this.parseCharCard(json);
       // Use the PNG as avatar
       character.avatar = `data:image/png;base64,${this.uint8ArrayToBase64(new Uint8Array(buffer))}`;

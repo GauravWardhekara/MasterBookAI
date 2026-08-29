@@ -9,6 +9,8 @@ import { LMStudioStrategy } from './providers/lmstudio-strategy';
 import { OllamaStrategy } from './providers/ollama-strategy';
 import { GeminiStrategy } from './providers/gemini-strategy';
 import { HuggingFaceStrategy } from './providers/huggingface-strategy';
+import { OpenRouterStrategy } from './providers/openrouter-strategy';
+import { NanoGptStrategy } from './providers/nanogpt-strategy';
 
 export interface CompletionOptions {
   model?: string;
@@ -38,6 +40,16 @@ export class LLMProviderService {
   private abortController?: AbortController;
   private strategies: Record<string, LLMStrategy> = {
     openai: new OpenAIStrategy(),
+    openrouter: new OpenRouterStrategy(),
+    nanogpt: new NanoGptStrategy(),
+    literouter: new OpenAIStrategy(),
+    featherless: new OpenAIStrategy(),
+    deepinfra: new OpenAIStrategy(),
+    togetherai: new OpenAIStrategy(),
+    groq: new OpenAIStrategy(),
+    wavespeed: new OpenAIStrategy(),
+    ofox: new OpenAIStrategy(),
+    aimlapi: new OpenAIStrategy(),
     vllm: new OpenAIStrategy(), // vLLM is OpenAI compatible
     custom: new OpenAIStrategy(),
     anthropic: new AnthropicStrategy(),
@@ -93,9 +105,9 @@ export class LLMProviderService {
   }
 
   convertMessages(messages: Message[], systemPrompt: string, template: PromptTemplate): LLMMessage[] {
-    const llmMessages: LLMMessage[] = [];
+    const rawMessages: { role: string; content: string }[] = [];
     if (systemPrompt) {
-      llmMessages.push({ role: 'system', content: systemPrompt });
+      rawMessages.push({ role: 'system', content: systemPrompt });
     }
     for (const msg of messages) {
       let role: 'user' | 'assistant' | 'system';
@@ -107,11 +119,44 @@ export class LLMProviderService {
         default: role = 'user';
       }
       let content = msg.content;
-      if (msg.senderName && msg.role !== 'system') {
+      if (msg.senderName && msg.role !== 'system' && msg.role !== 'user') {
         content = `[${msg.senderName}]: ${content}`;
       }
-      llmMessages.push({ role, content });
+      rawMessages.push({ role, content });
     }
-    return llmMessages;
+
+    // Apply instruct template formatting if requested (squashes into a single string)
+    // Most standard API endpoints (OpenAI /v1/chat/completions) expect the raw objects and handle formatting themselves.
+    // We only apply this if the user specifically requests a forced format over a raw string.
+    
+    if (template === 'chatml') {
+      let formatted = '';
+      for (const m of rawMessages) {
+        formatted += `<|im_start|>${m.role}\n${m.content}<|im_end|>\n`;
+      }
+      formatted += `<|im_start|>assistant\n`;
+      return [{ role: 'user', content: formatted }];
+    } 
+    else if (template === 'alpaca') {
+      let formatted = '';
+      for (const m of rawMessages) {
+        if (m.role === 'system') formatted += `${m.content}\n\n`;
+        else if (m.role === 'user') formatted += `### Instruction:\n${m.content}\n\n`;
+        else if (m.role === 'assistant') formatted += `### Response:\n${m.content}\n\n`;
+      }
+      formatted += `### Response:\n`;
+      return [{ role: 'user', content: formatted }];
+    }
+    else if (template === 'llama3') {
+      let formatted = `<|begin_of_text|>`;
+      for (const m of rawMessages) {
+        formatted += `<|start_header_id|>${m.role}<|end_header_id|>\n\n${m.content}<|eot_id|>`;
+      }
+      formatted += `<|start_header_id|>assistant<|end_header_id|>\n\n`;
+      return [{ role: 'user', content: formatted }];
+    }
+
+    // Default: return standard array of objects for Chat endpoints
+    return rawMessages as LLMMessage[];
   }
 }

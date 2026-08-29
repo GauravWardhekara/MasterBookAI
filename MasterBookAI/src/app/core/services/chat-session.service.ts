@@ -49,6 +49,57 @@ export class ChatSessionService {
       isFavorite: data.isFavorite || false,
       tags: data.tags || [],
     };
+
+    // Auto-populate first message if not provided
+    if (session.messages.length === 0 && session.scenarioId) {
+      const scenario = await this.db.scenarios.get(session.scenarioId);
+      if (scenario) {
+        if (session.mode === 'story' && scenario.greeting) {
+          // RPG/Story mode narrator greeting (Dungeo style)
+          session.messages.push({
+            id: generateId(),
+            role: 'narrator',
+            senderId: 'system',
+            senderName: 'Narrator',
+            content: scenario.greeting,
+            timestamp: now(),
+            generatedImageRefs: [],
+            isPinnedAsMemory: false,
+            tokenCount: Math.ceil(scenario.greeting.length / 4),
+          });
+        } else if (session.mode === 'chat' && session.activeCharacterIds.length > 0) {
+          // Chat mode character greeting (SillyTavern style)
+          const char = await this.db.characters.get(session.activeCharacterIds[0]);
+          if (char) {
+            // Priority: firstMessage, then greetingMessages[0], then alternateGreetings[0]
+            const firstMsg = char.firstMessage || (char.greetingMessages && char.greetingMessages[0]) || (char.alternateGreetings && char.alternateGreetings[0]);
+            
+            // Build the alternates list for swiping
+            const alternates: string[] = [];
+            if (char.firstMessage) alternates.push(char.firstMessage);
+            if (char.greetingMessages) alternates.push(...char.greetingMessages.filter(g => g !== char.firstMessage));
+            if (char.alternateGreetings) alternates.push(...char.alternateGreetings.filter(g => !alternates.includes(g)));
+            
+            if (firstMsg) {
+              session.messages.push({
+                id: generateId(),
+                role: 'assistant',
+                senderId: char.id,
+                senderName: char.name,
+                content: firstMsg,
+                timestamp: now(),
+                generatedImageRefs: [],
+                isPinnedAsMemory: false,
+                tokenCount: Math.ceil(firstMsg.length / 4),
+                alternates: alternates.length > 1 ? alternates : undefined,
+                activeAlternateIndex: alternates.length > 1 ? 0 : undefined
+              });
+            }
+          }
+        }
+      }
+    }
+
     await this.db.chatSessions.add(session);
     return session;
   }

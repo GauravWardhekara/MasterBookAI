@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem,
   IonLabel, IonIcon, IonToggle, IonButton, IonInput,
-  IonChip,
+  IonChip, IonModal, IonButtons,
   AlertController, ToastController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -119,15 +119,12 @@ import { ConnectionProfile, createDefaultConnectionProfile, ImageGenConfig } fro
                     <!-- Model list chips -->
                     @if (p.modelList.length > 0) {
                       <div class="model-chips">
-                        <span class="detail-label">All Models:</span>
-                        <div class="chips-wrap">
-                          @for (m of p.modelList | slice:0:10; track m) {
+                        <span class="detail-label">All Models ({{ p.modelList.length }}):</span>
+                        <div class="chips-wrap scrollable-chips">
+                          @for (m of p.modelList; track m) {
                             <ion-chip class="mb-chip model-chip">
                               {{ m }}
                             </ion-chip>
-                          }
-                          @if (p.modelList.length > 10) {
-                            <span class="more-models">+{{ p.modelList.length - 10 }} more</span>
                           }
                         </div>
                       </div>
@@ -163,116 +160,153 @@ import { ConnectionProfile, createDefaultConnectionProfile, ImageGenConfig } fro
           </div>
         }
     
-        <!-- ── Connection Editor (inline) ── -->
-        @if (showEditor) {
-          <div class="editor-panel mb-glass-card mb-fade-in">
-            <div class="editor-header">
-              <span class="editor-title">{{ isEditingProfile ? 'Edit Connection' : 'New Connection' }}</span>
-              <ion-button fill="clear" size="small" (click)="cancelEditor()">
-                <ion-icon slot="icon-only" name="close-outline"></ion-icon>
-              </ion-button>
-            </div>
-            <div class="form-field">
-              <label>Name</label>
-              <ion-input [(ngModel)]="editorProfile.name" placeholder="e.g. Local Ollama, OpenAI" class="mb-input"></ion-input>
-            </div>
-            <div class="form-field">
-              <label>Type</label>
-              <div class="toggle-group">
-                <span class="mb-chip" [class.active]="editorProfile.type === 'local'" (click)="editorProfile.type = 'local'">
-                  <ion-icon name="desktop-outline"></ion-icon> Local
-                </span>
-                <span class="mb-chip" [class.active]="editorProfile.type === 'cloud'" (click)="editorProfile.type = 'cloud'">
-                  <ion-icon name="cloud-done-outline"></ion-icon> Cloud
-                </span>
-              </div>
-            </div>
-            <div class="form-field">
-              <label>Provider</label>
-              <div class="toggle-group">
-                <span class="mb-chip" [class.active]="editorProfile.provider === 'openai'" (click)="editorProfile.provider = 'openai'">OpenAI</span>
-                <span class="mb-chip" [class.active]="editorProfile.provider === 'anthropic'" (click)="editorProfile.provider = 'anthropic'">Anthropic</span>
-                <span class="mb-chip" [class.active]="editorProfile.provider === 'gemini'" (click)="editorProfile.provider = 'gemini'">Gemini</span>
-                <span class="mb-chip" [class.active]="editorProfile.provider === 'ollama'" (click)="editorProfile.provider = 'ollama'">Ollama</span>
-                <span class="mb-chip" [class.active]="editorProfile.provider === 'lmstudio'" (click)="editorProfile.provider = 'lmstudio'">LM Studio</span>
-                <span class="mb-chip" [class.active]="editorProfile.provider === 'vllm'" (click)="editorProfile.provider = 'vllm'">vLLM</span>
-                <span class="mb-chip" [class.active]="editorProfile.provider === 'custom'" (click)="editorProfile.provider = 'custom'">Custom</span>
-              </div>
-            </div>
-            <div class="form-field">
-              <label>Endpoint URL</label>
-              <ion-input [(ngModel)]="editorProfile.endpointUrl" placeholder="http://localhost:11434" class="mb-input"></ion-input>
-            </div>
-            <div class="form-field">
-              <label>Auth Method</label>
-              <div class="toggle-group">
-                <span class="mb-chip" [class.active]="editorProfile.authMethod === 'none'" (click)="editorProfile.authMethod = 'none'">None</span>
-                <span class="mb-chip" [class.active]="editorProfile.authMethod === 'api-key'" (click)="editorProfile.authMethod = 'api-key'">API Key</span>
-                <span class="mb-chip" [class.active]="editorProfile.authMethod === 'bearer-token'" (click)="editorProfile.authMethod = 'bearer-token'">Bearer Token</span>
-              </div>
-            </div>
-            @if (editorProfile.authMethod !== 'none') {
-              <div class="form-field">
-                <label>API Key / Token</label>
-                <ion-input [(ngModel)]="editorProfile.apiKey" type="password" placeholder="sk-..." class="mb-input"></ion-input>
-              </div>
-            }
-            <div class="form-row">
-              <div class="form-field half">
-                <label>Context Size</label>
-                <ion-input type="number" [(ngModel)]="editorProfile.contextSize" class="mb-input"></ion-input>
-              </div>
-              <div class="form-field half">
-                <label>Prompt Template</label>
-                <select [(ngModel)]="editorProfile.promptTemplate" class="native-select">
-                  <option value="chatml">ChatML</option>
-                  <option value="alpaca">Alpaca</option>
-                  <option value="llama3">Llama 3</option>
-                  <option value="mistral">Mistral</option>
-                  <option value="raw">Raw</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-field half">
-                <label>Temperature</label>
-                <ion-input type="number" [(ngModel)]="editorProfile.defaultSampling!.temperature" step="0.1" min="0" max="2" class="mb-input"></ion-input>
-              </div>
-              <div class="form-field half">
-                <label>Max Tokens</label>
-                <ion-input type="number" [(ngModel)]="editorProfile.defaultSampling!.maxTokens" class="mb-input"></ion-input>
-              </div>
-            </div>
-            <ion-item lines="none" class="toggle-item">
-              <ion-label>Enable Streaming</ion-label>
-              <ion-toggle [(ngModel)]="editorProfile.streamingEnabled" slot="end"></ion-toggle>
-            </ion-item>
-            <ion-item lines="none" class="toggle-item">
-              <ion-label>Set as Default</ion-label>
-              <ion-toggle [(ngModel)]="editorProfile.isDefault" slot="end"></ion-toggle>
-            </ion-item>
-            <div class="editor-actions">
-              <ion-button fill="clear" (click)="testEditorProfile()">
-                <ion-icon slot="start" name="flash-outline"></ion-icon>
-                Test Connection
-              </ion-button>
-              <ion-button class="mb-btn-primary" (click)="saveProfile()">
-                <ion-icon slot="start" name="save-outline"></ion-icon>
-                {{ isEditingProfile ? 'Update' : 'Create' }}
-              </ion-button>
-            </div>
-            <!-- Test Result -->
-            @if (testResult) {
-              <div class="test-result" [class.success]="testResult.success" [class.error]="!testResult.success">
-                <ion-icon [name]="testResult.success ? 'checkmark-circle-outline' : 'close-circle-outline'"></ion-icon>
-                <div class="test-result-text">
-                  <strong>{{ testResult.success ? 'Connected!' : 'Failed' }}</strong>
-                  <span>{{ testResult.message }}</span>
+        <!-- ── Connection Editor (Modal) ── -->
+        <ion-modal [isOpen]="showEditor" (didDismiss)="cancelEditor()" class="settings-modal">
+          <ng-template>
+            <ion-header class="ion-no-border">
+              <ion-toolbar>
+                <ion-title>{{ isEditingProfile ? 'Edit Connection' : 'New Connection' }}</ion-title>
+                <ion-buttons slot="end">
+                  <ion-button (click)="cancelEditor()">
+                    <ion-icon name="close-outline"></ion-icon>
+                  </ion-button>
+                </ion-buttons>
+              </ion-toolbar>
+            </ion-header>
+            <ion-content class="ion-padding">
+              <div class="editor-panel">
+                <div class="form-field">
+                  <label>Name</label>
+                  <ion-input [(ngModel)]="editorProfile.name" placeholder="e.g. Local Ollama, OpenAI" class="mb-input"></ion-input>
                 </div>
+                <div class="form-field">
+                  <label>Type</label>
+                  <div class="toggle-group">
+                    <span class="mb-chip" [class.active]="editorProfile.type === 'local'" (click)="editorProfile.type = 'local'">
+                      <ion-icon name="desktop-outline"></ion-icon> Local
+                    </span>
+                    <span class="mb-chip" [class.active]="editorProfile.type === 'cloud'" (click)="editorProfile.type = 'cloud'">
+                      <ion-icon name="cloud-done-outline"></ion-icon> Cloud
+                    </span>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label>Provider</label>
+                  <div class="toggle-group">
+                    @if (editorProfile.type === 'cloud') {
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'openai'" (click)="editorProfile.provider = 'openai'">OpenAI</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'anthropic'" (click)="editorProfile.provider = 'anthropic'">Anthropic</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'gemini'" (click)="editorProfile.provider = 'gemini'">Gemini</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'openrouter'" (click)="editorProfile.provider = 'openrouter'">OpenRouter</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'nanogpt'" (click)="editorProfile.provider = 'nanogpt'">Nano-GPT</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'literouter'" (click)="editorProfile.provider = 'literouter'">LiteRouter</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'featherless'" (click)="editorProfile.provider = 'featherless'">Featherless</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'deepinfra'" (click)="editorProfile.provider = 'deepinfra'">DeepInfra</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'togetherai'" (click)="editorProfile.provider = 'togetherai'">Together AI</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'groq'" (click)="editorProfile.provider = 'groq'">Groq</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'wavespeed'" (click)="editorProfile.provider = 'wavespeed'">WaveSpeed</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'ofox'" (click)="editorProfile.provider = 'ofox'">OFox</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'aimlapi'" (click)="editorProfile.provider = 'aimlapi'">AIML API</span>
+                    }
+                    @if (editorProfile.type === 'local') {
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'ollama'" (click)="editorProfile.provider = 'ollama'">Ollama</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'lmstudio'" (click)="editorProfile.provider = 'lmstudio'">LM Studio</span>
+                      <span class="mb-chip" [class.active]="editorProfile.provider === 'vllm'" (click)="editorProfile.provider = 'vllm'">vLLM</span>
+                    }
+                    <span class="mb-chip" [class.active]="editorProfile.provider === 'custom'" (click)="editorProfile.provider = 'custom'">Custom</span>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label>Endpoint URL</label>
+                  <ion-input [(ngModel)]="editorProfile.endpointUrl" placeholder="http://localhost:11434" class="mb-input"></ion-input>
+                </div>
+                <div class="form-field">
+                  <label>Auth Method</label>
+                  <div class="toggle-group">
+                    <span class="mb-chip" [class.active]="editorProfile.authMethod === 'none'" (click)="editorProfile.authMethod = 'none'">None</span>
+                    <span class="mb-chip" [class.active]="editorProfile.authMethod === 'api-key'" (click)="editorProfile.authMethod = 'api-key'">API Key</span>
+                    <span class="mb-chip" [class.active]="editorProfile.authMethod === 'bearer-token'" (click)="editorProfile.authMethod = 'bearer-token'">Bearer Token</span>
+                  </div>
+                </div>
+                @if (editorProfile.authMethod !== 'none') {
+                  <div class="form-field">
+                    <label>API Key / Token</label>
+                    <ion-input [(ngModel)]="editorProfile.apiKey" type="password" placeholder="sk-..." class="mb-input"></ion-input>
+                  </div>
+                }
+                <div class="form-row">
+                  <div class="form-field half">
+                    <label>Context Size</label>
+                    <ion-input type="number" [(ngModel)]="editorProfile.contextSize" class="mb-input"></ion-input>
+                  </div>
+                  <div class="form-field half">
+                    <label>Prompt Template</label>
+                    <select [(ngModel)]="editorProfile.promptTemplate" class="native-select">
+                      <option value="chatml">ChatML</option>
+                      <option value="alpaca">Alpaca</option>
+                      <option value="llama3">Llama 3</option>
+                      <option value="mistral">Mistral</option>
+                      <option value="raw">Raw</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field half">
+                    <label>Temperature</label>
+                    <ion-input type="number" [(ngModel)]="editorProfile.defaultSampling!.temperature" step="0.1" min="0" max="2" class="mb-input"></ion-input>
+                  </div>
+                  <div class="form-field half">
+                    <label>Max Tokens</label>
+                    <ion-input type="number" [(ngModel)]="editorProfile.defaultSampling!.maxTokens" class="mb-input"></ion-input>
+                  </div>
+                </div>
+                <ion-item lines="none" class="toggle-item">
+                  <ion-label>Enable Streaming</ion-label>
+                  <ion-toggle [(ngModel)]="editorProfile.streamingEnabled" slot="end"></ion-toggle>
+                </ion-item>
+                <ion-item lines="none" class="toggle-item">
+                  <ion-label>Set as Default</ion-label>
+                  <ion-toggle [(ngModel)]="editorProfile.isDefault" slot="end"></ion-toggle>
+                </ion-item>
+
+                <!-- Model list chips (in editor) -->
+                @if (editorProfile.modelList && editorProfile.modelList.length > 0) {
+                  <div class="model-chips">
+                    <span class="detail-label">Discovered Models ({{ editorProfile.modelList.length }}):</span>
+                    <div class="chips-wrap scrollable-chips">
+                      @for (m of editorProfile.modelList; track m) {
+                        <ion-chip class="mb-chip model-chip" [class.active]="editorProfile.defaultModel === m" (click)="editorProfile.defaultModel = m">
+                          {{ m }}
+                        </ion-chip>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <div class="editor-actions">
+                  <ion-button fill="clear" (click)="testEditorProfile()">
+                    <ion-icon slot="start" name="flash-outline"></ion-icon>
+                    Test Connection
+                  </ion-button>
+                  <ion-button class="mb-btn-primary" (click)="saveProfile()">
+                    <ion-icon slot="start" name="save-outline"></ion-icon>
+                    {{ isEditingProfile ? 'Update' : 'Create' }}
+                  </ion-button>
+                </div>
+                <!-- Test Result -->
+                @if (testResult) {
+                  <div class="test-result" [class.success]="testResult.success" [class.error]="!testResult.success">
+                    <ion-icon [name]="testResult.success ? 'checkmark-circle-outline' : 'close-circle-outline'"></ion-icon>
+                    <div class="test-result-text">
+                      <strong>{{ testResult.success ? 'Connected!' : 'Failed' }}</strong>
+                      <span>{{ testResult.message }}</span>
+                    </div>
+                  </div>
+                }
               </div>
-            }
-          </div>
-        }
+            </ion-content>
+          </ng-template>
+        </ion-modal>
     
         <!-- ── Image Generation ── -->
         <div class="mb-section-header" style="margin-top: 24px;">
@@ -367,6 +401,11 @@ import { ConnectionProfile, createDefaultConnectionProfile, ImageGenConfig } fro
                 <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'a1111'" (click)="editingImageConfig.providerType = 'a1111'">A1111</span>
                 <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'comfyui'" (click)="editingImageConfig.providerType = 'comfyui'">ComfyUI</span>
                 <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'copy-tags'" (click)="editingImageConfig.providerType = 'copy-tags'">Copy Tags</span>
+                <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'nanogpt'" (click)="editingImageConfig.providerType = 'nanogpt'">Nano-GPT</span>
+                <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'literouter'" (click)="editingImageConfig.providerType = 'literouter'">LiteRouter</span>
+                <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'deepinfra'" (click)="editingImageConfig.providerType = 'deepinfra'">DeepInfra</span>
+                <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'togetherai'" (click)="editingImageConfig.providerType = 'togetherai'">Together AI</span>
+                <span class="mb-chip" [class.active]="editingImageConfig.providerType === 'aimlapi'" (click)="editingImageConfig.providerType = 'aimlapi'">AIML API</span>
               </div>
             </div>
             @if (editingImageConfig.providerType !== 'copy-tags') {
@@ -376,12 +415,16 @@ import { ConnectionProfile, createDefaultConnectionProfile, ImageGenConfig } fro
                   [placeholder]="getImageEndpointPlaceholder()"
                 class="mb-input"></ion-input>
               </div>
+              <div class="form-field">
+                <label>API Key / Token</label>
+                <ion-input [(ngModel)]="editingImageConfig.apiKey" type="password" placeholder="sk-..." class="mb-input"></ion-input>
+              </div>
             }
-            @if (editingImageConfig.providerType !== 'copy-tags' && editingImageConfig.providerType !== 'openai') {
+            @if (editingImageConfig.providerType !== 'copy-tags') {
               <div class="form-field">
                 <label>Model / Checkpoint</label>
                 <ion-input [(ngModel)]="editingImageConfig.modelOrCheckpoint"
-                  placeholder="e.g. sd_xl_base_1.0"
+                  placeholder="e.g. sd_xl_base_1.0 or dall-e-3"
                 class="mb-input"></ion-input>
               </div>
             }
@@ -395,12 +438,42 @@ import { ConnectionProfile, createDefaultConnectionProfile, ImageGenConfig } fro
               <ion-label>Set as Default</ion-label>
               <ion-toggle [(ngModel)]="editingImageConfig.isDefault" slot="end"></ion-toggle>
             </ion-item>
+
+            <!-- Fetched Image Models (if supported) -->
+            @if (imageModels && imageModels.length > 0) {
+              <div class="model-chips">
+                <span class="detail-label">Discovered Models ({{ imageModels.length }}):</span>
+                <div class="chips-wrap scrollable-chips">
+                  @for (m of imageModels; track m) {
+                    <ion-chip class="mb-chip model-chip" [class.active]="editingImageConfig.modelOrCheckpoint === m" (click)="editingImageConfig.modelOrCheckpoint = m">
+                      {{ m }}
+                    </ion-chip>
+                  }
+                </div>
+              </div>
+            }
+
             <div class="editor-actions">
+              <ion-button fill="clear" (click)="testImageConfig()">
+                <ion-icon slot="start" name="flash-outline"></ion-icon>
+                Test Connection
+              </ion-button>
               <ion-button class="mb-btn-primary" (click)="saveImageConfig()">
                 <ion-icon slot="start" name="save-outline"></ion-icon>
                 {{ isEditingImageConfig ? 'Update' : 'Create' }}
               </ion-button>
             </div>
+            
+            <!-- Test Result -->
+            @if (imageTestResult) {
+              <div class="test-result" [class.success]="imageTestResult.success" [class.error]="!imageTestResult.success">
+                <ion-icon [name]="imageTestResult.success ? 'checkmark-circle-outline' : 'close-circle-outline'"></ion-icon>
+                <div class="test-result-text">
+                  <strong>{{ imageTestResult.success ? 'Connected!' : 'Failed' }}</strong>
+                  <span>{{ imageTestResult.message }}</span>
+                </div>
+              </div>
+            }
           </div>
         }
     
@@ -516,8 +589,9 @@ import { ConnectionProfile, createDefaultConnectionProfile, ImageGenConfig } fro
 
     .model-chips { margin-top: 8px; }
     .chips-wrap { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-    .model-chip { font-size: 11px; font-family: monospace; padding: 2px 8px; }
-    .more-models { font-size: 11px; color: var(--mb-text-muted); align-self: center; }
+    .scrollable-chips { max-height: 150px; overflow-y: auto; padding-right: 4px; }
+    .model-chip { font-size: 11px; font-family: monospace; padding: 2px 8px; cursor: pointer; }
+    .model-chip.active { background: var(--mb-primary); color: white; border-color: var(--mb-primary); }
 
     .conn-actions {
       display: flex; flex-wrap: wrap; gap: 0; margin-top: 12px;
@@ -587,7 +661,7 @@ import { ConnectionProfile, createDefaultConnectionProfile, ImageGenConfig } fro
     CommonModule, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem,
     IonLabel, IonIcon, IonToggle, IonButton, IonInput,
-    IonChip
+    IonChip, IonModal, IonButtons
   ],
 })
 export class SettingsPage implements OnInit {
@@ -609,6 +683,8 @@ export class SettingsPage implements OnInit {
   isEditingImageConfig = false;
   editingImageConfigId?: string;
   editingImageConfig: Partial<ImageGenConfig> = this.createDefaultImageGenConfig();
+  imageModels: string[] = [];
+  imageTestResult?: { success: boolean; message: string };
 
   constructor(
     private connectionService: ConnectionService,
@@ -740,12 +816,10 @@ export class SettingsPage implements OnInit {
       const models = await this.connectionService.testConnection(this.editorProfile);
       this.testResult = {
         success: true,
-        message: `Found ${models.length} model(s): ${models.slice(0, 3).join(', ')}${models.length > 3 ? '...' : ''}`
+        message: `Found ${models.length} model(s)`
       };
       // Auto-populate model list
-      if (!this.editorProfile.modelList || this.editorProfile.modelList.length === 0) {
-        this.editorProfile.modelList = models;
-      }
+      this.editorProfile.modelList = models;
     } catch (e: any) {
       this.testResult = { success: false, message: e.message };
     }
@@ -793,13 +867,32 @@ export class SettingsPage implements OnInit {
     this.isEditingImageConfig = false;
     this.editingImageConfigId = undefined;
     this.editingImageConfig = this.createDefaultImageGenConfig();
+    this.imageModels = [];
+    this.imageTestResult = undefined;
   }
 
   editImageConfig(ic: ImageGenConfig): void {
     this.showImageEditor = true;
     this.isEditingImageConfig = true;
     this.editingImageConfigId = ic.id;
-    this.editingImageConfig = { ...ic };
+    this.editingImageConfig = { ...ic, stylePresets: [...ic.stylePresets] };
+    this.imageModels = [];
+    this.imageTestResult = undefined;
+  }
+
+  async testImageConfig(): Promise<void> {
+    this.imageTestResult = undefined;
+    try {
+      const models = await this.imageProviderService.fetchModels(this.editingImageConfig, this.editingImageConfig.apiKey);
+      if (models && models.length > 0) {
+        this.imageModels = models;
+        this.imageTestResult = { success: true, message: `Found ${models.length} model(s)` };
+      } else {
+        this.imageTestResult = { success: true, message: `Connected, but no models discovered automatically.` };
+      }
+    } catch (e: any) {
+      this.imageTestResult = { success: false, message: e.message };
+    }
   }
 
   async saveImageConfig(): Promise<void> {

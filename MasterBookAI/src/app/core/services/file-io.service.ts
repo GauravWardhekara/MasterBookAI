@@ -6,6 +6,7 @@ import { ScenarioService } from './scenario.service';
 import { ChatSessionService } from './chat-session.service';
 import { ChatExportFile, SillyTavernWorldInfo, SillyTavernWIEntry } from '../models/export-file.model';
 import { ChatSession, Message } from '../models/chat-session.model';
+import { Lorebook, LoreType } from '../models/lorebook.model';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 
 /**
@@ -178,6 +179,16 @@ export class FileIOService {
     }
   }
 
+  private mapSelectiveLogicFromST(logic: number): 'AND_ANY' | 'AND_ALL' | 'NOT_ANY' | 'NOT_ALL' {
+    switch (logic) {
+      case 0: return 'AND_ANY';
+      case 1: return 'AND_ALL';
+      case 2: return 'NOT_ANY';
+      case 3: return 'NOT_ALL';
+      default: return 'AND_ANY';
+    }
+  }
+
   private mapPositionToST(pos: string): number {
     // ST positions: 0=before char, 1=after char, 2=before example, 3=after example, 4=at depth
     switch (pos) {
@@ -189,6 +200,56 @@ export class FileIOService {
       case 'before-context': return 4; // Map generic 'before' to depth
       default: return 4;
     }
+  }
+
+  private mapPositionFromST(pos: number): 'before-context' | 'after-context' | 'before_char' | 'after_char' {
+    switch (pos) {
+      case 0: return 'before_char';
+      case 1: return 'after_char';
+      case 2: return 'before-context'; // Map ST before example to before context
+      case 3: return 'after-context';
+      case 4: return 'before-context';
+      default: return 'before-context';
+    }
+  }
+
+  /**
+   * Import a SillyTavern World Info JSON file and convert it into a Lorebook with entries.
+   */
+  async importSTWorldInfo(jsonStr: string, title: string = 'Imported Lorebook'): Promise<Lorebook> {
+    const stWorldInfo: SillyTavernWorldInfo = JSON.parse(jsonStr);
+    if (!stWorldInfo.entries) {
+      throw new Error('Invalid World Info format. Missing "entries" object.');
+    }
+
+    const lorebook = await this.lorebookService.createLorebook({
+      title,
+      description: 'Imported from SillyTavern World Info',
+    });
+
+    const entries = Object.values(stWorldInfo.entries);
+    for (const entry of entries) {
+      await this.lorebookService.createEntry({
+        lorebookId: lorebook.id,
+        title: entry.comment || 'Imported Entry',
+        loreType: LoreType.PREMISE,
+        triggerWords: entry.key || [],
+        keySecondary: entry.keysecondary || [],
+        loreDescription: entry.content || '',
+        isEnabled: !entry.disable,
+        constant: entry.constant || false,
+        selectiveLogic: this.mapSelectiveLogicFromST(entry.selectiveLogic || 0),
+        insertionPosition: this.mapPositionFromST(entry.position || 4),
+        order: entry.order || 100,
+        excludeRecursion: entry.excludeRecursion || false,
+        probability: (entry.probability || 100) / 100, // Convert percentage to 0.0-1.0
+        depth: entry.depth || 4,
+        group: entry.group || '',
+        automationId: entry.automationId || '',
+      });
+    }
+
+    return lorebook;
   }
 
   /**

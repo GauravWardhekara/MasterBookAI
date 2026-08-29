@@ -57,7 +57,7 @@ export interface GeneratedImage {
 /**
  * Supported image provider types.
  */
-export type ImageProviderType = 'openai' | 'stability' | 'comfyui' | 'a1111' | 'copy-tags';
+export type ImageProviderType = 'openai' | 'stability' | 'comfyui' | 'a1111' | 'copy-tags' | 'nanogpt' | 'literouter' | 'deepinfra' | 'togetherai' | 'aimlapi';
 
 /**
  * Create default session image gen config.

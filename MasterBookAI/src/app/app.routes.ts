@@ -70,34 +70,34 @@ export const routes: Routes = [
         loadComponent: () => import('./features/gallery/gallery.page').then(m => m.GalleryPage),
       },
       {
+        path: 'settings',
+        loadComponent: () => import('./features/settings/settings.page').then(m => m.SettingsPage),
+      },
+      {
+        path: 'models',
+        loadComponent: () => import('./features/model-hub/model-hub.page').then(m => m.ModelHubPage),
+      },
+      {
+        path: 'chat/:sessionId',
+        loadComponent: () => import('./features/chat/chat.page').then(m => m.ChatPage),
+      },
+      {
+        path: 'story/:sessionId',
+        loadComponent: () => import('./features/story-mode/story-mode.page').then(m => m.StoryModePage),
+      },
+      {
+        path: 'worlds/:id',
+        loadComponent: () => import('./features/scenarios/scenario-detail/scenario-detail.page').then(m => m.ScenarioDetailPage),
+      },
+      {
+        path: 'scenarios/:id',
+        loadComponent: () => import('./features/scenarios/scenario-detail/scenario-detail.page').then(m => m.ScenarioDetailPage),
+      },
+      {
         path: '',
         redirectTo: 'home',
         pathMatch: 'full',
       },
     ],
-  },
-  {
-    path: 'settings',
-    loadComponent: () => import('./features/settings/settings.page').then(m => m.SettingsPage),
-  },
-  {
-    path: 'models',
-    loadComponent: () => import('./features/model-hub/model-hub.page').then(m => m.ModelHubPage),
-  },
-  {
-    path: 'chat/:sessionId',
-    loadComponent: () => import('./features/chat/chat.page').then(m => m.ChatPage),
-  },
-  {
-    path: 'story/:sessionId',
-    loadComponent: () => import('./features/story-mode/story-mode.page').then(m => m.StoryModePage),
-  },
-  {
-    path: 'worlds/:id',
-    loadComponent: () => import('./features/scenarios/scenario-detail/scenario-detail.page').then(m => m.ScenarioDetailPage),
-  },
-  {
-    path: 'scenarios/:id',
-    loadComponent: () => import('./features/scenarios/scenario-detail/scenario-detail.page').then(m => m.ScenarioDetailPage),
   }
 ];

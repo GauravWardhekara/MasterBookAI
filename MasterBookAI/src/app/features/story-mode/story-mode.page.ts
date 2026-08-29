@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -34,6 +34,7 @@ import { MemoryService } from '../../core/services/memory.service';
 import { ChatSetupModalComponent } from '../../shared/components/chat-setup-modal/chat-setup-modal.component';
 import { RpgSheetModalComponent } from '../../shared/components/rpg-sheet-modal/rpg-sheet-modal.component';
 import { WorldMapModalComponent } from '../../shared/components/world-map-modal/world-map-modal.component';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-story-mode',
@@ -615,9 +616,12 @@ import { WorldMapModalComponent } from '../../shared/components/world-map-modal/
 
     /* ── System Note ── */
     .system-note {
-      text-align: center; padding: 8px 0;
-      font-size: 12px; color: var(--mb-text-muted);
-      font-style: italic;
+      text-align: center; padding: 16px 24px; margin: 16px 0;
+      font-size: 14px; color: var(--mb-text-secondary);
+      font-style: italic; background: rgba(255,255,255,0.03);
+      border: 1px solid var(--mb-border);
+      border-radius: var(--mb-radius-md);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
 
     /* ═══════════════════════════════════════
@@ -695,7 +699,7 @@ import { WorldMapModalComponent } from '../../shared/components/world-map-modal/
     IonButtons, IonFooter, IonTextarea
   ],
 })
-export class StoryModePage implements OnInit {
+export class StoryModePage implements OnInit, OnDestroy {
   session?: ChatSession;
   scenario?: Scenario;
   persona?: Persona;
@@ -703,6 +707,7 @@ export class StoryModePage implements OnInit {
   lorebooks: Lorebook[] = [];
   connectionProfile?: ConnectionProfile;
   activeModel?: string;
+  private connectionSub?: Subscription;
 
   inputText = '';
   isStreaming = false;
@@ -770,12 +775,25 @@ export class StoryModePage implements OnInit {
     const persona = await this.characterService.getDefaultPersona();
     this.persona = persona || { id: 'default-persona', name: 'User', description: '', isDefault: true, createdAt: now(), updatedAt: now() };
 
-    this.connectionProfile = await this.connectionService.getDefaultProfile();
-    if (this.connectionProfile && this.connectionProfile.modelList && this.connectionProfile.modelList.length > 0) {
-      this.activeModel = this.connectionProfile.modelList[0];
-    }
+    this.connectionSub = this.connectionService.activeProfile$.subscribe(profile => {
+      this.connectionProfile = profile;
+      if (this.connectionProfile && this.connectionProfile.modelList && this.connectionProfile.modelList.length > 0) {
+        if (!this.activeModel || !this.connectionProfile.modelList.includes(this.activeModel)) {
+          this.activeModel = this.connectionProfile.defaultModel || this.connectionProfile.modelList[0];
+          if (this.activeModel && !this.connectionProfile.modelList.includes(this.activeModel)) {
+            this.activeModel = this.connectionProfile.modelList[0];
+          }
+        }
+      } else {
+        this.activeModel = undefined;
+      }
+    });
 
     setTimeout(() => this.scrollToBottom(), 100);
+  }
+
+  ngOnDestroy(): void {
+    if (this.connectionSub) this.connectionSub.unsubscribe();
   }
 
   // ── Computed ──

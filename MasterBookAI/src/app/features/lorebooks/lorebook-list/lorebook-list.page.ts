@@ -14,6 +14,7 @@ import {
 } from 'ionicons/icons';
 import { SettingsMenuComponent } from '../../../shared/components/settings-menu/settings-menu.component';
 import { LorebookService } from '../../../core/services/lorebook.service';
+import { FileIOService } from '../../../core/services/file-io.service';
 import { Lorebook } from '../../../core/models/lorebook.model';
 
 @Component({
@@ -199,6 +200,7 @@ export class LorebookListPage implements OnInit {
   constructor(
     private router: Router,
     private lorebookService: LorebookService,
+    private fileIOService: FileIOService,
     private alertCtrl: AlertController,
     private toastCtrl: ToastController,
   ) {
@@ -261,7 +263,21 @@ export class LorebookListPage implements OnInit {
 
     try {
       const text = await file.text();
-      await this.lorebookService.importLorebook(text);
+      // Try ST World Info format first
+      let isST = false;
+      try {
+        const json = JSON.parse(text);
+        if (json.entries && typeof json.entries === 'object') {
+          isST = true;
+        }
+      } catch (e) {}
+
+      if (isST) {
+        await this.fileIOService.importSTWorldInfo(text, file.name.replace('.json', ''));
+      } else {
+        await this.lorebookService.importLorebook(text);
+      }
+      
       await this.loadLorebooks();
       const toast = await this.toastCtrl.create({ message: 'Lorebook imported!', duration: 2000, color: 'success' });
       await toast.present();

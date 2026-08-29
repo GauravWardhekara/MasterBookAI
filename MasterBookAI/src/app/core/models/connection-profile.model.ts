@@ -1,7 +1,7 @@
 import { BaseModel } from './base.model';
 import { SamplingOverrides } from './character.model';
 
-export type LLMProvider = 'openai' | 'anthropic' | 'ollama' | 'lmstudio' | 'vllm' | 'gemini' | 'huggingface' | 'web-llm' | 'custom';
+export type LLMProvider = 'openai' | 'anthropic' | 'ollama' | 'lmstudio' | 'vllm' | 'gemini' | 'huggingface' | 'web-llm' | 'openrouter' | 'nanogpt' | 'literouter' | 'featherless' | 'deepinfra' | 'togetherai' | 'groq' | 'wavespeed' | 'ofox' | 'aimlapi' | 'custom';
 
 /**
  * Connection profile for an LLM backend.
@@ -12,12 +12,20 @@ export interface ConnectionProfile extends BaseModel {
   provider: LLMProvider;
   endpointUrl: string;
   authMethod: 'none' | 'api-key' | 'bearer-token';
-  apiKey?: string;                    // stored encrypted via secure storage
-  modelList: string[];                // available models at this endpoint
-  contextSize: number;
+  apiKey?: string;
+  
+  // Model settings
+  modelList: string[];            // Available models from endpoint
+  contextSize: number;            // Max context token limit
   defaultSampling: SamplingOverrides;
+  
   streamingEnabled: boolean;
+  
+  // Advanced overrides
   promptTemplate: PromptTemplate;
+  defaultModel?: string;           // Currently selected model
+  customStopStrings?: string[];
+  tokenizer?: string;
   isDefault: boolean;
 }
 
@@ -30,8 +38,9 @@ export type PromptTemplate = 'chatml' | 'alpaca' | 'llama3' | 'mistral' | 'raw' 
  * Image generation configuration.
  */
 export interface ImageGenConfig extends BaseModel {
-  providerType: 'openai' | 'stability' | 'comfyui' | 'a1111' | 'copy-tags';
+  providerType: 'openai' | 'stability' | 'comfyui' | 'a1111' | 'copy-tags' | 'nanogpt' | 'literouter' | 'deepinfra' | 'togetherai' | 'aimlapi';
   endpointUrl?: string;
+  apiKey?: string;
   modelOrCheckpoint?: string;
   stylePresets: string[];
   negativePromptDefaults: string;
@@ -49,6 +58,8 @@ export function createDefaultConnectionProfile(): Partial<ConnectionProfile> {
     endpointUrl: 'http://localhost:11434',
     authMethod: 'none',
     modelList: [],
+    defaultModel: '',
+    customStopStrings: [],
     contextSize: 4096,
     defaultSampling: {
       temperature: 0.7,

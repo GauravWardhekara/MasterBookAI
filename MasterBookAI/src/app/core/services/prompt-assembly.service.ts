@@ -132,12 +132,18 @@ export class PromptAssemblyService {
     if (activeCharacters.length > 0 && (activeCharacters[0] as any).postHistoryInstructions?.trim()) {
       postHistoryInstructions = this.macroService.expand((activeCharacters[0] as any).postHistoryInstructions.trim(), macroContext);
     }
+    
+    // Add Scenario Author's Note if present
+    let authorNoteStr = '';
+    if (scenario.authorNotes?.trim()) {
+      authorNoteStr = this.macroService.expand(scenario.authorNotes.trim(), macroContext);
+    }
 
     const systemPrompt = systemParts.join('\n\n');
 
     // 5. Trim message history to fit token budget
     // Rough estimate: 1 token ≈ 4 characters
-    const systemTokens = this.estimateTokens(systemPrompt) + this.estimateTokens(postHistoryInstructions);
+    const systemTokens = this.estimateTokens(systemPrompt) + this.estimateTokens(postHistoryInstructions) + this.estimateTokens(authorNoteStr);
     const availableTokens = contextSize - systemTokens - 200; // Reserve 200 for response
     const trimResult = this.trimMessages(messages, Math.max(availableTokens, 500));
     const trimmedMessages = trimResult.trimmed;
@@ -155,17 +161,21 @@ export class PromptAssemblyService {
       ).catch(err => console.warn('Background compression failed:', err));
     }
 
-    // If there are post-history instructions, we can either append them to the last user message
-    // or return them to be injected by the provider. For chat models, injecting as a system message
-    // at the very end (or appending to the last user message) is best.
-    if (postHistoryInstructions && trimmedMessages.length > 0) {
+    // Inject Author's Note into the context (usually 2-3 messages deep, but appending to last message or as system is reliable)
+    // We'll bundle Author's Note and Post History Instructions together at the end.
+    let finalSystemNote = '';
+    if (authorNoteStr) finalSystemNote += `[Author's Note: ${authorNoteStr}]\n\n`;
+    if (postHistoryInstructions) finalSystemNote += `[System Note: ${postHistoryInstructions}]`;
+    finalSystemNote = finalSystemNote.trim();
+
+    if (finalSystemNote && trimmedMessages.length > 0) {
       // Append to the last message if it's a user message, otherwise create a new system message
       const lastMsg = trimmedMessages[trimmedMessages.length - 1];
       if (lastMsg.role === 'user') {
-        lastMsg.content = `${lastMsg.content}\n\n[System Note: ${postHistoryInstructions}]`;
+        lastMsg.content = `${lastMsg.content}\n\n${finalSystemNote}`;
       } else {
         trimmedMessages.push({
-          id: 'jailbreak', role: 'system', senderId: 'system', senderName: 'System', content: postHistoryInstructions, timestamp: new Date().toISOString(), generatedImageRefs: [], isPinnedAsMemory: false, tokenCount: 0
+          id: 'jailbreak', role: 'system', senderId: 'system', senderName: 'System', content: finalSystemNote, timestamp: new Date().toISOString(), generatedImageRefs: [], isPinnedAsMemory: false, tokenCount: 0
         });
       }
     }
@@ -215,10 +225,35 @@ export class PromptAssemblyService {
       const recentMessages = messages.slice(-scanDepth);
       const scanText = recentMessages.map(m => m.content).join(' ').toLowerCase();
 
-      // Check trigger words
-      const isTriggered = entry.triggerWords.some(trigger =>
+      // Check primary trigger words
+      const hasPrimaryKeys = entry.triggerWords && entry.triggerWords.length > 0;
+      const primaryTriggered = !hasPrimaryKeys || entry.triggerWords.some(trigger =>
         scanText.includes(trigger.toLowerCase())
       );
+
+      let isTriggered = primaryTriggered;
+
+      // Check secondary trigger words with selective logic
+      if (isTriggered && entry.keySecondary && entry.keySecondary.length > 0) {
+        const secondaryLogic = entry.selectiveLogic || 'AND_ANY';
+        const matchAny = entry.keySecondary.some(k => scanText.includes(k.toLowerCase()));
+        const matchAll = entry.keySecondary.every(k => scanText.includes(k.toLowerCase()));
+
+        switch (secondaryLogic) {
+          case 'AND_ANY':
+            isTriggered = matchAny;
+            break;
+          case 'AND_ALL':
+            isTriggered = matchAll;
+            break;
+          case 'NOT_ANY':
+            isTriggered = !matchAny;
+            break;
+          case 'NOT_ALL':
+            isTriggered = !matchAll;
+            break;
+        }
+      }
 
       if (isTriggered) {
         // Apply probability check

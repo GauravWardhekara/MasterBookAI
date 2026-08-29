@@ -259,6 +259,16 @@ export class ScenarioListPage implements OnInit {
   async startChat(s: Scenario, event: Event): Promise<void> {
     event.stopPropagation();
     
+    // Check for existing session first to act as "Continue"
+    const existing = await this.chatSessionService.getSessionsByScenario(s.id);
+    if (existing.length > 0) {
+      existing.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      const mostRecent = existing[0];
+      const routePrefix = mostRecent.mode === 'story' ? '/story/' : '/chat/';
+      this.router.navigateByUrl(routePrefix + mostRecent.id);
+      return;
+    }
+
     // Fetch all available models across profiles
     const profiles = await this.connectionService.getAllProfiles();
     let allModels: string[] = [];

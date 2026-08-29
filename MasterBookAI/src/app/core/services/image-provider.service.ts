@@ -17,6 +17,7 @@ interface ImageProviderAdapter {
   readonly type: ImageProviderType;
   generate(tags: string[], negativeTags: string[], params: ImageGenParams): Promise<string[]>;
   isAvailable(): boolean;
+  fetchModels?(endpointUrl?: string, apiKey?: string): Promise<string[]>;
 }
 
 /**
@@ -73,6 +74,11 @@ export class ImageProviderService {
     this.adapters.set('a1111', new A1111ImageAdapter());
     this.adapters.set('comfyui', new ComfyUIImageAdapter());
     this.adapters.set('copy-tags', new CopyTagsAdapter());
+    this.adapters.set('nanogpt', new NanoGptImageAdapter());
+    this.adapters.set('literouter', new LiteRouterImageAdapter());
+    this.adapters.set('deepinfra', new DeepInfraImageAdapter());
+    this.adapters.set('togetherai', new TogetherAIImageAdapter());
+    this.adapters.set('aimlapi', new AIMLAPIImageAdapter());
   }
 
   // ── CONFIG CRUD ──
@@ -300,6 +306,17 @@ Return ONLY valid JSON:`;
   }
 
   /**
+   * Fetch available models from the provider if supported.
+   */
+  async fetchModels(config: Partial<ImageGenConfig>, apiKey?: string): Promise<string[]> {
+    const adapter = this.adapters.get(config.providerType || 'openai');
+    if (adapter && adapter.fetchModels) {
+      return adapter.fetchModels(config.endpointUrl, apiKey);
+    }
+    return [];
+  }
+
+  /**
    * Format tags as a comma-separated prompt string.
    */
   formatTagsAsPrompt(tags: string[]): string {
@@ -388,6 +405,25 @@ class OpenAIImageAdapter implements ImageProviderAdapter {
   }
 
   isAvailable(): boolean { return true; }
+
+  async fetchModels(endpointUrl?: string, apiKey?: string): Promise<string[]> {
+    const url = endpointUrl || this.endpointUrl;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+    try {
+      const response = await fetch(`${url}/v1/models`, { headers, signal: AbortSignal.timeout(10000) });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data && Array.isArray(data.data)) {
+          return data.data.map((m: any) => m.id);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch models', e);
+    }
+    return [];
+  }
 
   private getOpenAISize(w: number, h: number): string {
     // DALL-E 3 supports: 1024x1024, 1792x1024, 1024x1792
@@ -648,4 +684,75 @@ class CopyTagsAdapter implements ImageProviderAdapter {
   }
 
   isAvailable(): boolean { return true; }
+}
+
+/**
+ * NanoGPT adapter (Extends OpenAI but provides a different default endpoint and type)
+ */
+class NanoGptImageAdapter extends OpenAIImageAdapter {
+  override readonly type: ImageProviderType = 'nanogpt';
+  override endpointUrl = 'https://nano-gpt.com/api';
+
+  override async fetchModels(endpointUrl?: string, apiKey?: string): Promise<string[]> {
+    const url = endpointUrl || this.endpointUrl;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+    try {
+      // NanoGPT has a specific models endpoint or uses OpenAI's
+      const response = await fetch(`${url}/v1/models`, { headers, signal: AbortSignal.timeout(10000) });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data && Array.isArray(data.data)) {
+          // Filter to image generation models if possible, or just return all
+          return data.data.map((m: any) => m.id);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch NanoGPT models', e);
+    }
+    return [];
+  }
+}
+
+/**
+ * LiteRouter adapter (Extends OpenAI but provides a different default endpoint and type)
+ */
+class LiteRouterImageAdapter extends OpenAIImageAdapter {
+  override readonly type: ImageProviderType = 'literouter';
+  override endpointUrl = 'https://api.literouter.com';
+
+  override async fetchModels(endpointUrl?: string, apiKey?: string): Promise<string[]> {
+    const url = endpointUrl || this.endpointUrl;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+    try {
+      const response = await fetch(`${url}/v1/models`, { headers, signal: AbortSignal.timeout(10000) });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data && Array.isArray(data.data)) {
+          return data.data.map((m: any) => m.id);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch LiteRouter models', e);
+    }
+    return [];
+  }
+}
+
+class DeepInfraImageAdapter extends LiteRouterImageAdapter {
+  override readonly type: ImageProviderType = 'deepinfra';
+  override endpointUrl = 'https://api.deepinfra.com/v1/openai';
+}
+
+class TogetherAIImageAdapter extends LiteRouterImageAdapter {
+  override readonly type: ImageProviderType = 'togetherai';
+  override endpointUrl = 'https://api.together.xyz/v1';
+}
+
+class AIMLAPIImageAdapter extends LiteRouterImageAdapter {
+  override readonly type: ImageProviderType = 'aimlapi';
+  override endpointUrl = 'https://api.aimlapi.com/v1';
 }
